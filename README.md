@@ -2,6 +2,8 @@
 
 A small self-hosted Remotion rendering API intended to run as a separate Railway service next to an existing n8n deployment.
 
+The repository includes the Remotion CLI explicitly because `npx remotion browser ensure` requires `@remotion/cli` to be installed.
+
 Remotion renders real MP4 videos from React compositions. This service accepts a JSON scene definition, renders one video at a time, and returns the MP4 response.
 
 ## Important licensing note
