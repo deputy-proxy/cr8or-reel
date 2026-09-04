@@ -7,13 +7,10 @@ RUN npm install --omit=dev
 
 COPY . .
 
-# FFmpeg is required by Remotion's video encoding pipeline.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# @remotion/cli is installed explicitly in package.json.
-# This downloads the Chromium browser used for rendering.
 RUN npx remotion browser ensure
 
 RUN mkdir -p /app/tmp && chown -R node:node /app

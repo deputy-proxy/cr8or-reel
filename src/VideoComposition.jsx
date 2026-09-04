@@ -3,74 +3,97 @@ import {
   AbsoluteFill,
   Img,
   OffthreadVideo,
-  useCurrentFrame,
-  useVideoConfig,
   interpolate,
-  spring
+  spring,
+  useCurrentFrame,
+  useVideoConfig
 } from "remotion";
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
 
 function animatedStyle(element, frame, fps) {
   const start = Math.round((element.start ?? 0) * fps);
   const end = Math.round((element.end ?? 999999) * fps);
   const animation = element.animation || "none";
-  const duration = Math.max(1, Math.round((element.animationDuration ?? 0.6) * fps));
+
+  const localFrame = frame - start;
+  const durationFrames = Math.max(1, end - start);
 
   let opacity = element.opacity ?? 1;
   let x = element.x ?? 0;
   let y = element.y ?? 0;
   let scale = element.scale ?? 1;
+  let rotation = element.rotation ?? 0;
+
+  const fadeFrames = Math.max(1, Math.min(Math.round(fps * 0.5), durationFrames));
 
   if (animation === "fadeIn") {
-    opacity *= interpolate(frame, [start, start + duration], [0, 1], {
+    opacity *= interpolate(localFrame, [0, fadeFrames], [0, 1], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp"
     });
   }
 
   if (animation === "fadeOut") {
-    opacity *= interpolate(frame, [end - duration, end], [1, 0], {
+    const remaining = end - frame;
+    opacity *= interpolate(remaining, [0, fadeFrames], [0, 1], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp"
     });
   }
 
   if (animation === "slideInUp") {
-    const p = interpolate(frame, [start, start + duration], [80, 0], {
+    const progress = interpolate(localFrame, [0, fadeFrames], [0, 1], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp"
     });
-    y += p;
+    y += interpolate(progress, [0, 1], [80, 0]);
+    opacity *= progress;
   }
 
   if (animation === "slideInDown") {
-    const p = interpolate(frame, [start, start + duration], [-80, 0], {
+    const progress = interpolate(localFrame, [0, fadeFrames], [0, 1], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp"
     });
-    y += p;
+    y -= interpolate(progress, [0, 1], [80, 0]);
+    opacity *= progress;
   }
 
   if (animation === "slideInLeft") {
-    const p = interpolate(frame, [start, start + duration], [-120, 0], {
+    const progress = interpolate(localFrame, [0, fadeFrames], [0, 1], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp"
     });
-    x += p;
+    x -= interpolate(progress, [0, 1], [80, 0]);
+    opacity *= progress;
   }
 
   if (animation === "slideInRight") {
-    const p = interpolate(frame, [start, start + duration], [120, 0], {
+    const progress = interpolate(localFrame, [0, fadeFrames], [0, 1], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp"
     });
-    x += p;
+    x += interpolate(progress, [0, 1], [80, 0]);
+    opacity *= progress;
   }
 
   if (animation === "scaleIn") {
-    scale *= interpolate(frame, [start, start + duration], [0.85, 1], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp"
+    const progress = spring({
+      frame: Math.max(0, localFrame),
+      fps,
+      config: {
+        damping: 200
+      }
     });
+    scale *= interpolate(progress, [0, 1], [0.7, 1]);
+    opacity *= progress;
+  }
+
+  if (frame < start || frame >= end) {
+    opacity = 0;
   }
 
   return {
@@ -79,43 +102,45 @@ function animatedStyle(element, frame, fps) {
     top: y,
     width: element.width,
     height: element.height,
-    opacity,
-    transform: `scale(${scale}) rotate(${element.rotation ?? 0}deg)`,
+    opacity: clamp(opacity, 0, 1),
+    transform: `scale(${scale}) rotate(${rotation}deg)`,
     transformOrigin: element.transformOrigin || "center center",
-    display: frame < start || frame > end ? "none" : "block"
+    zIndex: element.zIndex ?? 1,
+    pointerEvents: "none"
   };
 }
 
 function TextElement({ element, frame, fps }) {
-  const style = animatedStyle(element, frame, fps);
+  const style = {
+    ...animatedStyle(element, frame, fps),
+    color: element.color || "#ffffff",
+    fontSize: element.fontSize || 64,
+    fontWeight: element.fontWeight || 400,
+    fontFamily: element.fontFamily || "Arial, sans-serif",
+    lineHeight: element.lineHeight || 1.1,
+    letterSpacing: element.letterSpacing ?? 0,
+    textAlign: element.textAlign || "left",
+    whiteSpace: element.whiteSpace || "pre-wrap",
+    textShadow: element.textShadow || "none",
+    background: element.background || "transparent",
+    padding: element.padding || 0,
+    borderRadius: element.borderRadius || 0,
+    display: "flex",
+    alignItems: element.alignItems || "flex-start",
+    justifyContent: element.justifyContent || "flex-start",
+    boxSizing: "border-box"
+  };
 
-  return (
-    <div
-      style={{
-        ...style,
-        color: element.color || "#ffffff",
-        fontFamily: element.fontFamily || "Arial, sans-serif",
-        fontSize: element.fontSize || 72,
-        fontWeight: element.fontWeight || 700,
-        lineHeight: element.lineHeight || 1.05,
-        textAlign: element.textAlign || "left",
-        whiteSpace: element.whiteSpace || "pre-wrap"
-      }}
-    >
-      {element.text || ""}
-    </div>
-  );
+  return <div style={style}>{element.text || ""}</div>;
 }
 
 function ImageElement({ element, frame, fps }) {
-  const style = animatedStyle(element, frame, fps);
-
   return (
     <Img
       src={element.src}
       style={{
-        ...style,
-        objectFit: element.objectFit || "contain"
+        ...animatedStyle(element, frame, fps),
+        objectFit: element.objectFit || "cover"
       }}
     />
   );
@@ -129,11 +154,14 @@ export const VideoComposition = ({
   const { fps } = useVideoConfig();
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#000" }}>
+    <AbsoluteFill style={{ backgroundColor: "#000000", overflow: "hidden" }}>
       {background ? (
         <OffthreadVideo
           src={background}
+          muted
           style={{
+            position: "absolute",
+            inset: 0,
             width: "100%",
             height: "100%",
             objectFit: "cover"
@@ -141,11 +169,11 @@ export const VideoComposition = ({
         />
       ) : null}
 
-      {elements.map((element, index) => {
+      {elements.map((element) => {
         if (element.type === "text") {
           return (
             <TextElement
-              key={element.id || index}
+              key={element.id || `text-${frame}-${Math.random()}`}
               element={element}
               frame={frame}
               fps={fps}
@@ -156,7 +184,7 @@ export const VideoComposition = ({
         if (element.type === "image") {
           return (
             <ImageElement
-              key={element.id || index}
+              key={element.id || `image-${frame}-${Math.random()}`}
               element={element}
               frame={frame}
               fps={fps}
