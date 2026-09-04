@@ -67,3 +67,35 @@ Railway commonly provides port 8080 at runtime. Do not override Railway's `PORT`
 The Docker image installs Debian Chromium and its runtime libraries before running
 `remotion browser ensure`. This is intentional: Remotion's downloaded Chrome
 headless shell dynamically links against system libraries such as `libnspr4`.
+
+
+## EdventurePromo template
+
+The renderer includes an `EdventurePromo` Remotion composition designed from the
+provided EdVenture reference artwork.
+
+It expects:
+
+```json
+{
+  "template": "EdventurePromo",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "duration": 8,
+  "data": {
+    "bgImage": "https://example.com/background.jpg",
+    "headline": "Cambridge nu se pregătește doar pe hârtie.",
+    "buttonText": "Programează evaluarea gratuită"
+  }
+}
+```
+
+Animation sequence:
+1. Background image is visible immediately.
+2. Orange gradient fades up from the bottom.
+3. Headline appears character by character.
+4. White CTA button slides upward into view after the headline.
+
+The template uses `data.bgImage`, so the top-level `background` field is not
+required for this template.

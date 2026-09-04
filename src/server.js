@@ -64,25 +64,33 @@ app.post("/render", async (req, res) => {
     }
 
     const {
-      background,
+      background = "",
       elements = [],
+      data = {},
+      template = "",
       width = 1080,
       height = 1920,
       fps = 30,
       duration = 30,
-      compositionId = "Video",
+      compositionId = template || "Video",
       outputFormat = "mp4"
     } = body;
-
-    if (!background || typeof background !== "string") {
-      return res.status(400).json({
-        error: "background is required and must be a URL"
-      });
-    }
 
     if (!Array.isArray(elements)) {
       return res.status(400).json({
         error: "elements must be an array"
+      });
+    }
+
+    if (template === "EdventurePromo") {
+      if (!data || typeof data !== "object" || !data.bgImage) {
+        return res.status(400).json({
+          error: "data.bgImage is required for EdventurePromo"
+        });
+      }
+    } else if (!background || typeof background !== "string") {
+      return res.status(400).json({
+        error: "background is required and must be a URL"
       });
     }
 
@@ -134,6 +142,8 @@ app.post("/render", async (req, res) => {
       const inputProps = {
         background,
         elements,
+        data,
+        template,
         width: numericWidth,
         height: numericHeight,
         fps: numericFps,

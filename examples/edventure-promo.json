@@ -1,0 +1,12 @@
+{
+  "template": "EdventurePromo",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "duration": 8,
+  "data": {
+    "bgImage": "https://example.com/edventure-background.jpg",
+    "headline": "Cambridge nu se pregătește doar pe hârtie.",
+    "buttonText": "Programează evaluarea gratuită"
+  }
+}
