@@ -60,3 +60,10 @@ http://cr8or-reel:<PORT>/render
 ```
 
 Railway commonly provides port 8080 at runtime. Do not override Railway's `PORT` variable manually.
+
+
+## Browser runtime
+
+The Docker image installs Debian Chromium and its runtime libraries before running
+`remotion browser ensure`. This is intentional: Remotion's downloaded Chrome
+headless shell dynamically links against system libraries such as `libnspr4`.
