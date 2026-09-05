@@ -210,7 +210,18 @@ app.post("/render", async (req, res) => {
       return res.status(400).json({ error: "elements must be an array" });
     }
 
-    if (templateId) {
+    if (template && typeof template === "object" && !Array.isArray(template)) {
+      const resolved = resolveObject(template, data);
+      width = resolved.canvas?.width ?? width;
+      height = resolved.canvas?.height ?? height;
+      fps = resolved.canvas?.fps ?? fps;
+      duration = resolved.canvas?.duration ?? duration;
+      template = resolved;
+      compositionId = "Template";
+      elements = Array.isArray(resolved.elements) ? resolved.elements : elements;
+      background = resolved.background?.src || resolved.background?.color || background;
+      body.templateDefinition = resolved;
+    } else if (templateId) {
       const definition = await getTemplate(templateId);
 
       if (!definition) {
@@ -307,7 +318,7 @@ app.post("/render", async (req, res) => {
       });
 
       const selectedCompositionId =
-        compositionId || template || "Video";
+        compositionId || (typeof template === "string" ? template : "Template");
 
       const composition = compositions.find(
         (item) => item.id === selectedCompositionId

@@ -8,21 +8,26 @@
 </head>
 <body>
 <div class="app">
-  <aside class="sidebar">
-    <div class="brand">cr8or<span>-reel</span></div>
-    <div class="sidebar-section">
-      <div class="label">PROJECT</div>
-      <select id="projectSelect"></select>
-    </div>
-    <div class="sidebar-section templates-head"><div class="label">TEMPLATES</div><button id="newTemplate" class="icon-btn" title="New template">+</button></div>
-    <div id="templateList" class="template-list"></div>
-    <div class="sidebar-spacer"></div>
-    <div class="sidebar-foot">Git-backed templates<br><span>JSON is the source of truth.</span></div>
-  </aside>
+
 
   <main class="main">
     <header class="topbar">
-      <div class="crumb"><span>Templates</span><b>/</b><strong id="templateName">Template</strong></div>
+      <div class="topbar-left">
+        <div class="brand">cr8or<span>-reel</span></div>
+        <div class="top-select" id="projectSelectWrap">
+          <button id="projectSelectButton" class="custom-select" type="button" aria-haspopup="listbox" aria-expanded="false">
+            <span class="custom-select-value">Project</span><span class="custom-select-chevron">⌄</span>
+          </button>
+          <div id="projectSelectMenu" class="custom-select-menu" role="listbox" hidden></div>
+        </div>
+        <div class="top-select template-select" id="templateSelectWrap">
+          <button id="templateSelectButton" class="custom-select" type="button" aria-haspopup="listbox" aria-expanded="false">
+            <span class="custom-select-value">Template</span><span class="custom-select-chevron">⌄</span>
+          </button>
+          <div id="templateSelectMenu" class="custom-select-menu" role="listbox" hidden></div>
+        </div>
+        <button id="newTemplate" class="top-icon-btn" title="New template">+</button>
+      </div>
       <div class="top-actions">
         <button id="undoBtn" title="Undo (⌘/Ctrl+Z)">↶</button>
         <button id="redoBtn" title="Redo (⌘/Ctrl+Shift+Z)">↷</button>
