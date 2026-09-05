@@ -343,9 +343,10 @@ async function save() {
     body: JSON.stringify(state.template)
   });
 
-  state.template = setTemplateDefaults(saved);
+  const savedTemplate = saved.template || saved;
+  state.template = setTemplateDefaults(savedTemplate);
   state.templates = state.templates.map((template) =>
-    template.id === saved.id ? saved : template
+    template.id === savedTemplate.id ? savedTemplate : template
   );
 
   render();
