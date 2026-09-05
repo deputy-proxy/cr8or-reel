@@ -238,6 +238,8 @@ export async function saveTemplate(template) {
     },
     sampleData: template.sampleData || {},
     background: template.background || null,
+    renderer: template.renderer || "",
+    chromeCarousel: template.chromeCarousel || null,
     elements: Array.isArray(template.elements) ? template.elements : []
   };
 

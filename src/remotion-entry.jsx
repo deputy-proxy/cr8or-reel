@@ -3,6 +3,7 @@ import { Composition } from "remotion";
 import { VideoComposition } from "./VideoComposition.jsx";
 import { TemplateComposition } from "./TemplateComposition.jsx";
 import { EdventurePromo } from "./templates/EdventurePromo.jsx";
+import { ChromeCarousel } from "./templates/ChromeCarousel.jsx";
 
 export const RemotionRoot = () => {
   return (
@@ -42,6 +43,23 @@ export const RemotionRoot = () => {
             background: {
               color: "#000000"
             },
+            elements: []
+          },
+          data: {}
+        }}
+      />
+
+      <Composition
+        id="ChromeCarousel"
+        component={ChromeCarousel}
+        width={1170}
+        height={2532}
+        fps={60}
+        durationInFrames={558}
+        defaultProps={{
+          template: {
+            canvas: { width: 1170, height: 2532, fps: 60, duration: 9.3 },
+            chromeCarousel: { slideCount: 4, slideDuration: 2.325, transitionDuration: 0.55 },
             elements: []
           },
           data: {}

@@ -217,7 +217,7 @@ app.post("/render", async (req, res) => {
       fps = resolved.canvas?.fps ?? fps;
       duration = resolved.canvas?.duration ?? duration;
       template = resolved;
-      compositionId = "Template";
+      compositionId = resolved.renderer || "Template";
       elements = Array.isArray(resolved.elements) ? resolved.elements : elements;
       background = resolved.background?.src || resolved.background?.color || background;
       body.templateDefinition = resolved;
@@ -237,7 +237,7 @@ app.post("/render", async (req, res) => {
       fps = resolved.canvas.fps;
       duration = resolved.canvas.duration;
       template = resolved;
-      compositionId = "Template";
+      compositionId = resolved.renderer || "Template";
       elements = resolved.elements;
       background =
         resolved.background?.src || resolved.background?.color || "";

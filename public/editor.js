@@ -9,7 +9,7 @@ const clamp = (n,min,max) => Math.min(max,Math.max(min,n));
 const esc = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 async function api(url, options={}) { const r=await fetch(url,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options}); const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.error||`Request failed: ${r.status}`); return d; }
 function uid(p='layer'){return `${p}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;}
-function defaults(t={}){return {version:1,id:t.id||'',name:t.name||'New template',project:t.project||state.projects[0]||'',format:t.format||'reel',canvas:{width:Number(t.canvas?.width||1080),height:Number(t.canvas?.height||1920),fps:Number(t.canvas?.fps||30),duration:Number(t.canvas?.duration||8)},sampleData:t.sampleData||{},background:t.background||{color:'#111111'},elements:Array.isArray(t.elements)?t.elements:[]};}
+function defaults(t={}){return {version:1,id:t.id||'',name:t.name||'New template',project:t.project||state.projects[0]||'',format:t.format||'reel',canvas:{width:Number(t.canvas?.width||1080),height:Number(t.canvas?.height||1920),fps:Number(t.canvas?.fps||30),duration:Number(t.canvas?.duration||8)},sampleData:t.sampleData||{},background:t.background||{color:'#111111'},renderer:t.renderer||'',chromeCarousel:t.chromeCarousel||null,elements:Array.isArray(t.elements)?t.elements:[]};}
 function layer(){return state.template?.elements?.find(x=>x.id===state.selectedLayerId)||null;}
 function timeFmt(s){s=Math.max(0,Number(s)||0); return `${String(Math.floor(s/60)).padStart(2,'0')}:${(s%60).toFixed(2).padStart(5,'0')}`;}
 function projectOptions(sel=''){return state.projects.map(p=>({value:p,label:p,selected:p===sel}));}
@@ -61,6 +61,40 @@ function animationStyle(e){
   const duration=Math.max(1,Number(a.duration??.5)*fps);
   const progress=easeValue((frame-start)/duration,a.easing||'easeOutCubic');
   let x=Number(e.x||0), y=Number(e.y||0), scale=Number(e.scale??1), opacity=Number(e.opacity??1), rotation=Number(e.rotation||0);
+
+  if(state.template?.renderer==='ChromeCarousel' && Number.isFinite(Number(e.slide))){
+    const slideCount=Math.max(1,Number(state.template.chromeCarousel?.slideCount||4));
+    const slideDuration=Number(state.template.chromeCarousel?.slideDuration||2.325);
+    const transitionDuration=Number(state.template.chromeCarousel?.transitionDuration||.55);
+    const slideFrames=slideDuration*fps;
+    const transitionFrames=transitionDuration*fps;
+    const slideIndex=Number(e.slide);
+    const slideStart=slideIndex*slideFrames;
+    const elapsed=frame-slideStart;
+    const transitionStart=slideStart+slideFrames-transitionFrames;
+    if(frame < slideStart) return {x,y,opacity:0,transform:`scale(${scale}) rotate(${rotation}deg)`};
+    if(frame >= slideStart && frame < slideStart+slideFrames){
+      if(slideIndex < slideCount-1 && frame >= transitionStart){
+        const p=easeValue((frame-transitionStart)/transitionFrames,'easeOutCubic');
+        const tx=(1-p)*Number(state.template.canvas.width||1170);
+        const ry=-68*p;
+        return {x,y,opacity,transform:`translateX(${-tx}px) rotateY(${ry}deg) scale(${1-.04*p}) rotate(${rotation}deg)`};
+      }
+      return {x,y,opacity,transform:`scale(${scale}) rotate(${rotation}deg)`};
+    }
+    if(slideIndex>0){
+      const previousStart=(slideIndex-1)*slideFrames;
+      const previousTransitionStart=previousStart+slideFrames-transitionFrames;
+      if(frame>=previousTransitionStart && frame<slideStart){
+        const p=easeValue((frame-previousTransitionStart)/transitionFrames,'easeOutCubic');
+        const tx=(1-p)*Number(state.template.canvas.width||1170);
+        const ry=68*(1-p);
+        return {x,y,opacity,transform:`translateX(${tx}px) rotateY(${ry}deg) scale(${.96+.04*p}) rotate(${rotation}deg)`};
+      }
+    }
+    return {x,y,opacity:0,transform:`scale(${scale}) rotate(${rotation}deg)`};
+  }
+
   if(frame<start || frame>=end) return {opacity:0, transform:`rotate(${rotation}deg)`};
   if(type==='fadeIn') opacity*=progress;
   else if(type==='fadeOut'){ const fadeStart=Math.max(start,end-duration); opacity*=1-easeValue((frame-fadeStart)/duration,a.easing||'easeOutCubic'); }
