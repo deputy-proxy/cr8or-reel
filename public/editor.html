@@ -3,133 +3,118 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>cr8or-reel Template Editor</title>
+  <title>cr8or-reel — Template Editor</title>
   <link rel="stylesheet" href="/editor.css">
 </head>
 <body>
-  <div class="app">
-    <aside class="sidebar">
-      <div class="brand">cr8or<span>-reel</span></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">cr8or<span>-reel</span></div>
+    <div class="sidebar-section">
+      <div class="label">PROJECT</div>
+      <select id="projectSelect"></select>
+    </div>
+    <div class="sidebar-section templates-head"><div class="label">TEMPLATES</div><button id="newTemplate" class="icon-btn" title="New template">+</button></div>
+    <div id="templateList" class="template-list"></div>
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-foot">Git-backed templates<br><span>JSON is the source of truth.</span></div>
+  </aside>
 
-      <label class="field">
-        <span>Project</span>
-        <select id="projectSelect"></select>
-      </label>
-
-      <div class="section-title">Templates</div>
-      <div id="templateList" class="template-list"></div>
-
-      <button id="newTemplate" class="secondary full">+ New template</button>
-    </aside>
-
-    <main class="workspace">
-      <header class="toolbar">
-        <div>
-          <div class="eyebrow">VISUAL TEMPLATE EDITOR</div>
-          <h1 id="templateName">Template</h1>
-        </div>
-        <div class="toolbar-actions">
-          <button id="addText" class="secondary">+ Text</button>
-          <button id="addImage" class="secondary">+ Image</button>
-          <button id="addShape" class="secondary">+ Shape</button>
-          <button id="saveTemplate" class="primary">Save</button>
-          <button id="renderTemplate" class="primary">Render MP4</button>
-        </div>
-      </header>
-
-      <div class="editor-grid">
-        <section class="canvas-panel">
-          <div class="canvas-wrap">
-            <div id="canvas" class="canvas"></div>
-          </div>
-          <div class="timeline">
-            <div class="timeline-label">Layers</div>
-            <div id="timelineLayers" class="timeline-layers"></div>
-          </div>
-        </section>
-
-        <aside class="inspector">
-          <div class="section-title">Template</div>
-          <label class="field">
-            <span>Name</span>
-            <input id="nameInput">
-          </label>
-          <label class="field">
-            <span>Project</span>
-            <select id="templateProject"></select>
-          </label>
-
-          <div class="inspector-divider"></div>
-          <div class="section-title">Canvas</div>
-          <div class="two-col">
-            <label class="field"><span>Width</span><input id="widthInput" type="number"></label>
-            <label class="field"><span>Height</span><input id="heightInput" type="number"></label>
-            <label class="field"><span>FPS</span><input id="fpsInput" type="number"></label>
-            <label class="field"><span>Duration</span><input id="durationInput" type="number" step="0.1"></label>
-          </div>
-
-          <div class="inspector-divider"></div>
-          <div class="section-title">Selected layer</div>
-          <div id="emptyInspector" class="empty">Select a layer on the canvas or in the layer list.</div>
-          <div id="layerInspector" hidden>
-            <label class="field"><span>Type</span><input id="layerType" disabled></label>
-            <label class="field"><span>Text / source</span><textarea id="layerText" rows="3"></textarea></label>
-            <div class="two-col">
-              <label class="field"><span>X</span><input id="layerX" type="number"></label>
-              <label class="field"><span>Y</span><input id="layerY" type="number"></label>
-              <label class="field"><span>Width</span><input id="layerWidth" type="number"></label>
-              <label class="field"><span>Height</span><input id="layerHeight" type="number"></label>
-              <label class="field"><span>Start</span><input id="layerStart" type="number" step="0.1"></label>
-              <label class="field"><span>End</span><input id="layerEnd" type="number" step="0.1"></label>
-              <label class="field"><span>Opacity</span><input id="layerOpacity" type="number" min="0" max="1" step="0.05"></label>
-              <label class="field"><span>Rotation</span><input id="layerRotation" type="number"></label>
-            </div>
-
-            <div id="textFields">
-              <label class="field"><span>Font size</span><input id="fontSize" type="number"></label>
-              <label class="field"><span>Font weight</span><input id="fontWeight" type="number"></label>
-              <label class="field"><span>Color</span><input id="layerColor" type="text"></label>
-              <label class="field"><span>Background</span><input id="layerBackground" type="text"></label>
-            </div>
-
-            <div id="imageFields">
-              <label class="field"><span>Image URL</span><input id="imageSrc" type="text"></label>
-              <label class="field"><span>Object fit</span>
-                <select id="objectFit">
-                  <option>cover</option>
-                  <option>contain</option>
-                  <option>fill</option>
-                </select>
-              </label>
-            </div>
-
-            <div id="shapeFields">
-              <label class="field"><span>Fill</span><input id="shapeBackground" type="text"></label>
-              <label class="field"><span>Border radius</span><input id="borderRadius" type="number"></label>
-            </div>
-
-            <label class="field">
-              <span>Animation</span>
-              <select id="animationType">
-                <option value="none">None</option>
-                <option value="fadeIn">Fade in</option>
-                <option value="fadeOut">Fade out</option>
-                <option value="slideInUp">Slide in up</option>
-                <option value="slideInDown">Slide in down</option>
-                <option value="slideInLeft">Slide in left</option>
-                <option value="slideInRight">Slide in right</option>
-                <option value="scaleIn">Scale in</option>
-                <option value="springIn">Spring in</option>
-              </select>
-            </label>
-
-            <button id="deleteLayer" class="danger full">Delete layer</button>
-          </div>
-        </aside>
+  <main class="main">
+    <header class="topbar">
+      <div class="crumb"><span>Templates</span><b>/</b><strong id="templateName">Template</strong></div>
+      <div class="top-actions">
+        <button id="undoBtn" title="Undo (⌘/Ctrl+Z)">↶</button>
+        <button id="redoBtn" title="Redo (⌘/Ctrl+Shift+Z)">↷</button>
+        <span class="dirty" id="dirtyState">Saved</span>
+        <button id="saveTemplate" class="primary">Save</button>
+        <button id="renderTemplate" class="export">Render MP4</button>
       </div>
-    </main>
-  </div>
+    </header>
 
-  <script src="/editor.js"></script>
+    <section class="workspace">
+      <aside class="asset-panel">
+        <div class="panel-tabs"><button class="tab active" data-panel="assets">Assets</button><button class="tab" data-panel="layers">Layers</button></div>
+        <div id="assetsPanel" class="left-panel-content">
+          <div class="asset-search"><input id="assetSearch" placeholder="Search assets..."></div>
+          <div class="asset-group"><div class="group-title">ADD</div>
+            <button class="add-card" data-add="text"><span class="add-icon">T</span><span>Text</span></button>
+            <button class="add-card" data-add="image"><span class="add-icon">▧</span><span>Image</span></button>
+            <button class="add-card" data-add="video"><span class="add-icon">▶</span><span>Video</span></button>
+            <button class="add-card" data-add="shape"><span class="add-icon">□</span><span>Shape</span></button>
+            <button class="add-card" data-add="button"><span class="add-icon">▣</span><span>Button</span></button>
+          </div>
+          <div class="asset-group"><div class="group-title">BACKGROUND</div>
+            <label class="mini-field"><span>Color</span><input id="bgColor" type="text"></label>
+            <label class="mini-field"><span>Image URL</span><input id="bgImage" type="text"></label>
+          </div>
+        </div>
+        <div id="layersPanel" class="left-panel-content" hidden>
+          <div class="group-title">COMPOSITION</div>
+          <div id="layerStack" class="layer-stack"></div>
+        </div>
+      </aside>
+
+      <section class="center">
+        <div class="canvas-toolbar">
+          <div class="toolset"><button id="fitCanvas" class="tool active">Fit</button><button id="zoomOut" class="tool">−</button><span id="zoomValue">100%</span><button id="zoomIn" class="tool">+</button></div>
+          <div class="canvas-meta"><span id="canvasSize">1080 × 1920</span><span>•</span><span id="fpsLabel">30 FPS</span></div>
+          <div class="toolset"><button id="jsonToggle" class="tool">{ } Code</button></div>
+        </div>
+        <div id="stage" class="stage">
+          <div id="canvas" class="canvas"></div>
+          <div id="jsonEditor" class="json-editor" hidden>
+            <div class="code-head"><span>template.json</span><span id="jsonStatus">Valid JSON</span></div>
+            <textarea id="jsonCode" spellcheck="false"></textarea>
+            <div class="code-actions"><button id="formatJson">Format</button><button id="applyJson" class="primary">Apply JSON</button></div>
+          </div>
+        </div>
+        <div class="player-bar">
+          <button id="playBtn" class="play">▶</button>
+          <span id="timeLabel">00:00.00</span><span class="slash">/</span><span id="durationLabel">00:08.00</span>
+          <input id="scrub" type="range" min="0" max="8" step="0.01" value="0">
+          <button id="jumpStart">|◀</button><button id="jumpEnd">▶|</button>
+        </div>
+
+        <section class="timeline-panel">
+          <div class="timeline-toolbar">
+            <div class="timeline-tools"><button id="addTrack" title="Add empty track">+ Track</button><button id="snapToggle" class="active">Snap</button></div>
+            <div class="timeline-tools"><button id="timelineZoomOut">−</button><span id="timelineZoomValue">1×</span><button id="timelineZoomIn">+</button></div>
+          </div>
+          <div id="timeline" class="timeline"></div>
+        </section>
+      </section>
+
+      <aside class="inspector-panel">
+        <div class="inspector-head"><span id="inspectorTitle">Properties</span><button id="closeInspector" class="icon-btn">×</button></div>
+        <div id="templateInspector" class="inspector-body">
+          <div class="inspector-section"><div class="section-title">Template</div>
+            <label class="field"><span>Name</span><input id="nameInput"></label>
+            <label class="field"><span>Project</span><select id="templateProject"></select></label>
+            <div class="grid2"><label class="field"><span>Width</span><input id="widthInput" type="number"></label><label class="field"><span>Height</span><input id="heightInput" type="number"></label></div>
+            <div class="grid2"><label class="field"><span>FPS</span><input id="fpsInput" type="number"></label><label class="field"><span>Duration</span><input id="durationInput" type="number" step="0.1"></label></div>
+          </div>
+          <div id="layerInspector" class="inspector-section" hidden>
+            <div class="section-title">Selected layer</div>
+            <label class="field"><span>Name</span><input id="layerName"></label>
+            <label class="field"><span>Type</span><input id="layerType" disabled></label>
+            <label class="field"><span>Content / source</span><textarea id="layerText" rows="3"></textarea></label>
+            <div class="grid2"><label class="field"><span>X</span><input id="layerX" type="number"></label><label class="field"><span>Y</span><input id="layerY" type="number"></label></div>
+            <div class="grid2"><label class="field"><span>Width</span><input id="layerWidth" type="number"></label><label class="field"><span>Height</span><input id="layerHeight" type="number"></label></div>
+            <div class="grid2"><label class="field"><span>Start</span><input id="layerStart" type="number" step="0.01"></label><label class="field"><span>End</span><input id="layerEnd" type="number" step="0.01"></label></div>
+            <div class="grid2"><label class="field"><span>Opacity</span><input id="layerOpacity" type="number" min="0" max="1" step="0.05"></label><label class="field"><span>Rotation</span><input id="layerRotation" type="number"></label></div>
+            <div id="textFields"><div class="section-title">Typography</div><div class="grid2"><label class="field"><span>Font size</span><input id="fontSize" type="number"></label><label class="field"><span>Weight</span><input id="fontWeight" type="number"></label></div><label class="field"><span>Font</span><input id="fontFamily"></label><div class="grid2"><label class="field"><span>Color</span><input id="layerColor"></label><label class="field"><span>Align</span><select id="textAlign"><option>left</option><option>center</option><option>right</option></select></label></div></div>
+            <div id="mediaFields"><div class="section-title">Media</div><label class="field"><span>Object fit</span><select id="objectFit"><option>cover</option><option>contain</option><option>fill</option></select></label></div>
+            <div id="shapeFields"><div class="section-title">Shape</div><div class="grid2"><label class="field"><span>Fill</span><input id="shapeBackground"></label><label class="field"><span>Radius</span><input id="borderRadius" type="number"></label></div></div>
+            <div class="section-title">Animation</div><label class="field"><span>Entrance</span><select id="animationType"><option value="none">None</option><option value="fadeIn">Fade in</option><option value="fadeOut">Fade out</option><option value="slideInUp">Slide in up</option><option value="slideInDown">Slide in down</option><option value="slideInLeft">Slide in left</option><option value="slideInRight">Slide in right</option><option value="scaleIn">Scale in</option><option value="springIn">Spring in</option></select></label>
+            <div class="grid2"><label class="field"><span>Anim. duration</span><input id="animationDuration" type="number" step="0.05"></label><label class="field"><span>Easing</span><select id="animationEasing"><option>easeOutCubic</option><option>linear</option><option>easeInOut</option></select></label></div>
+            <div class="inspector-actions"><button id="duplicateLayer">Duplicate</button><button id="deleteLayer" class="danger">Delete</button></div>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+</div>
+<script src="/editor.js"></script>
 </body>
 </html>
