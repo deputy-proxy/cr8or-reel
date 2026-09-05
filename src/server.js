@@ -5,26 +5,101 @@ import path from "path";
 import crypto from "crypto";
 
 import { bundle } from "@remotion/bundler";
+import { getCompositions, renderMedia } from "@remotion/renderer";
+
 import {
-  getCompositions,
-  renderMedia
-} from "@remotion/renderer";
+  getTemplate,
+  listTemplates,
+  saveTemplate,
+  resolveObject
+} from "./template-system.js";
 
 const app = express();
 
-app.use(
-  express.json({
-    limit: "10mb",
-    strict: true
-  })
-);
+app.use(express.json({ limit: "10mb", strict: true }));
+app.use(express.static(path.join(process.cwd(), "public")));
 
 const PORT = Number(process.env.PORT || 3000);
 const RENDER_SECRET = process.env.RENDER_SECRET || "";
 const DEFAULT_CONCURRENCY = Number(process.env.RENDER_CONCURRENCY || 4);
 const MAX_CONCURRENCY = 6;
-
 const rootDir = process.cwd();
+
+const FALLBACK_PROJECTS = [
+  "EdVenture",
+  "Juco",
+  "Contro",
+  "Contes Publishing",
+  "Conrad Works",
+  "Conrad Ventures",
+  "SRVC",
+  "Contes Ventures",
+  "Personal"
+];
+
+function notionTitleProperty(properties = {}) {
+  return Object.entries(properties).find(
+    ([, value]) => value?.type === "title"
+  );
+}
+
+function notionPropertyValue(property) {
+  if (!property) return "";
+
+  if (property.type === "title" || property.type === "rich_text") {
+    return (property[property.type] || [])
+      .map((item) => item?.plain_text || item?.text?.content || "")
+      .join("");
+  }
+
+  if (property.type === "select") {
+    return property.select?.name || "";
+  }
+
+  return "";
+}
+
+async function getNotionProjects() {
+  const token = process.env.NOTION_API_TOKEN;
+  const databaseId =
+    process.env.NOTION_PROJECTS_DATABASE_ID ||
+    "083802c8-0e5d-48a4-809e-bd75af8a1334";
+
+  if (!token) return FALLBACK_PROJECTS;
+
+  const response = await fetch(
+    `https://api.notion.com/v1/databases/${databaseId}/query`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        page_size: 100
+      })
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Notion projects query failed: ${response.status} ${await response.text()}`
+    );
+  }
+
+  const payload = await response.json();
+
+  return payload.results
+    .map((page) => {
+      const titleEntry = notionTitleProperty(page.properties);
+      return titleEntry
+        ? notionPropertyValue(titleEntry[1])
+        : "";
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+}
 
 app.get("/health", (_req, res) => {
   res.json({
@@ -32,6 +107,64 @@ app.get("/health", (_req, res) => {
     service: "video-renderer",
     remotion: "4.0.520"
   });
+});
+
+app.get("/editor", (_req, res) => {
+  res.sendFile(path.join(process.cwd(), "public", "editor.html"));
+});
+
+app.get("/api/projects", async (_req, res) => {
+  try {
+    const projects = await getNotionProjects();
+    res.json({ projects, source: process.env.NOTION_API_TOKEN ? "notion" : "fallback" });
+  } catch (error) {
+    console.error("Project lookup failed:", error);
+    res.json({ projects: FALLBACK_PROJECTS, source: "fallback", warning: error.message });
+  }
+});
+
+app.get("/api/templates", async (_req, res) => {
+  try {
+    const templates = await listTemplates();
+    res.json({ templates });
+  } catch (error) {
+    console.error("Template lookup failed:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/templates/:id", async (req, res) => {
+  const template = await getTemplate(req.params.id);
+
+  if (!template) {
+    return res.status(404).json({ error: "Template not found" });
+  }
+
+  res.json(template);
+});
+
+app.put("/api/templates/:id", async (req, res) => {
+  try {
+    const result = await saveTemplate({
+      ...req.body,
+      id: req.params.id
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error("Template save failed:", error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post("/api/templates", async (req, res) => {
+  try {
+    const result = await saveTemplate(req.body);
+    res.status(201).json(result);
+  } catch (error) {
+    console.error("Template creation failed:", error);
+    res.status(400).json({ error: error.message });
+  }
 });
 
 app.post("/render", async (req, res) => {
@@ -49,37 +182,55 @@ app.post("/render", async (req, res) => {
           Buffer.from(RENDER_SECRET)
         )
       ) {
-        return res.status(401).json({
-          error: "Unauthorized"
-        });
+        return res.status(401).json({ error: "Unauthorized" });
       }
     }
 
     const body = req.body;
 
     if (!body || typeof body !== "object") {
-      return res.status(400).json({
-        error: "Invalid JSON body"
-      });
+      return res.status(400).json({ error: "Invalid JSON body" });
     }
 
-    const {
+    let {
       background = "",
       elements = [],
       data = {},
       template = "",
+      templateId = "",
       width = 1080,
       height = 1920,
       fps = 30,
       duration = 30,
-      compositionId = template || "Video",
+      compositionId = "",
       outputFormat = "mp4"
     } = body;
 
     if (!Array.isArray(elements)) {
-      return res.status(400).json({
-        error: "elements must be an array"
-      });
+      return res.status(400).json({ error: "elements must be an array" });
+    }
+
+    if (templateId) {
+      const definition = await getTemplate(templateId);
+
+      if (!definition) {
+        return res.status(404).json({
+          error: `Template "${templateId}" was not found`
+        });
+      }
+
+      const resolved = resolveObject(definition, data);
+
+      width = resolved.canvas.width;
+      height = resolved.canvas.height;
+      fps = resolved.canvas.fps;
+      duration = resolved.canvas.duration;
+      template = "Template";
+      compositionId = "Template";
+      elements = resolved.elements;
+      background =
+        resolved.background?.src || resolved.background?.color || "";
+      body.templateDefinition = resolved;
     }
 
     if (template === "EdventurePromo") {
@@ -88,9 +239,9 @@ app.post("/render", async (req, res) => {
           error: "data.bgImage is required for EdventurePromo"
         });
       }
-    } else if (!background || typeof background !== "string") {
+    } else if (!templateId && !background && elements.length === 0) {
       return res.status(400).json({
-        error: "background is required and must be a URL"
+        error: "background or templateId is required"
       });
     }
 
@@ -147,20 +298,24 @@ app.post("/render", async (req, res) => {
         width: numericWidth,
         height: numericHeight,
         fps: numericFps,
-        duration: numericDuration
+        duration: numericDuration,
+        templateDefinition: body.templateDefinition || null
       };
 
       const compositions = await getCompositions(serveUrl, {
         inputProps
       });
 
+      const selectedCompositionId =
+        compositionId || template || "Video";
+
       const composition = compositions.find(
-        (item) => item.id === compositionId
+        (item) => item.id === selectedCompositionId
       );
 
       if (!composition) {
         throw new Error(
-          `Composition "${compositionId}" was not found`
+          `Composition "${selectedCompositionId}" was not found`
         );
       }
 
@@ -201,10 +356,12 @@ app.post("/render", async (req, res) => {
         'attachment; filename="render.mp4"'
       );
       res.setHeader("Content-Length", stat.size);
-      res.setHeader("X-Render-Duration-Ms", String(Date.now() - startedAt));
+      res.setHeader(
+        "X-Render-Duration-Ms",
+        String(Date.now() - startedAt)
+      );
 
-      const file = await fs.readFile(outputLocation);
-      return res.send(file);
+      return res.send(await fs.readFile(outputLocation));
     } finally {
       await fs.rm(workDir, {
         recursive: true,

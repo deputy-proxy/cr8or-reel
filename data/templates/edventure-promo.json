@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "id": "edventure-promo",
+  "name": "EdVenture Promo",
+  "project": "EdVenture",
+  "format": "reel",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "duration": 8
+  },
+  "sampleData": {
+    "product": {
+      "name": "Cambridge Courses"
+    },
+    "headline": "Cambridge nu se pregătește doar pe hârtie.",
+    "buttonText": "Programează evaluarea gratuită",
+    "image": ""
+  },
+  "background": {
+    "color": "#F36A21"
+  },
+  "elements": [
+    {
+      "id": "headline",
+      "name": "Headline",
+      "type": "text",
+      "x": 110,
+      "y": 970,
+      "width": 880,
+      "height": 310,
+      "zIndex": 10,
+      "start": 0.9,
+      "end": 8,
+      "opacity": 1,
+      "text": "{{headline}}",
+      "color": "#FFFFFF",
+      "fontSize": 72,
+      "fontWeight": 800,
+      "fontFamily": "Arial, Helvetica, sans-serif",
+      "lineHeight": 1.04,
+      "letterSpacing": -1.5,
+      "textAlign": "left",
+      "animation": {
+        "type": "slideInUp",
+        "duration": 0.7,
+        "distance": 35,
+        "easing": "easeOutCubic"
+      }
+    },
+    {
+      "id": "button",
+      "name": "CTA",
+      "type": "button",
+      "x": 110,
+      "y": 1710,
+      "width": 860,
+      "height": 86,
+      "zIndex": 11,
+      "start": 3,
+      "end": 8,
+      "opacity": 1,
+      "text": "{{buttonText}}",
+      "background": "#FFFFFF",
+      "color": "#F36A21",
+      "fontSize": 34,
+      "fontWeight": 700,
+      "fontFamily": "Arial, Helvetica, sans-serif",
+      "borderRadius": 43,
+      "boxShadow": "0 8px 28px rgba(0,0,0,0.16)",
+      "animation": {
+        "type": "slideInUp",
+        "duration": 0.65,
+        "distance": 90,
+        "easing": "easeOutCubic"
+      }
+    }
+  ]
+}

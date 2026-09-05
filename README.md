@@ -1,101 +1,195 @@
-# Video Renderer
+# cr8or-reel
 
-A small HTTP video-rendering service built with Express and Remotion.
+Remotion-based video renderer with a data-driven template system and a browser visual editor.
 
-## Endpoint
+## Architecture
 
-### GET /health
+- **Notion Projects** is the canonical source for project names when `NOTION_API_TOKEN` is configured.
+- **Template JSON** contains the visual definition of a template.
+- **Gemini / n8n** can provide content through the `data` object.
+- **cr8or-reel** resolves `{{placeholders}}` and renders the template with Remotion.
+- **Editor** lets you select a project, edit a template visually, manipulate layers, save JSON, and render MP4.
 
-Returns service health.
+## Run
 
-### POST /render
+```bash
+npm install
+npm start
+```
 
-Accepts JSON:
+Open:
+
+```text
+http://localhost:3000/editor
+```
+
+## Notion
+
+Set:
+
+```text
+NOTION_API_TOKEN=...
+NOTION_PROJECTS_DATABASE_ID=083802c8-0e5d-48a4-809e-bd75af8a1334
+```
+
+The editor queries the Notion Projects database and dynamically detects its title property.
+
+Without a Notion token, the editor uses the built-in fallback project list.
+
+## Template format
+
+Templates live in:
+
+```text
+data/templates/*.json
+```
+
+Example:
 
 ```json
 {
-  "background": "https://example.com/video.mp4",
-  "width": 1080,
-  "height": 1920,
-  "fps": 30,
-  "duration": 5,
-  "compositionId": "Video",
-  "outputFormat": "mp4",
+  "version": 1,
+  "id": "example",
+  "name": "Example",
+  "project": "EdVenture",
+  "format": "reel",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "duration": 8
+  },
+  "sampleData": {
+    "product": {
+      "name": "Example product"
+    }
+  },
+  "background": {
+    "color": "#000000"
+  },
   "elements": [
     {
-      "type": "text",
       "id": "headline",
-      "text": "HELLO FROM REMOTION",
-      "x": 80,
-      "y": 700,
-      "fontSize": 90,
+      "type": "text",
+      "x": 100,
+      "y": 800,
+      "width": 880,
+      "height": 200,
+      "text": "{{product.name}}",
+      "fontSize": 72,
       "fontWeight": 800,
       "color": "#ffffff",
-      "start": 0,
-      "end": 5,
-      "animation": "slideInUp"
+      "animation": {
+        "type": "fadeIn",
+        "duration": 0.5,
+        "easing": "easeOutCubic"
+      }
     }
   ]
 }
 ```
 
-The `background` must be a remotely accessible video URL.
+Supported visual layers:
 
-If `RENDER_SECRET` is configured, send the same value in:
+- `text`
+- `image`
+- `video`
+- `shape`
+- `button`
 
-```text
-x-render-secret: ...
+Supported animations:
+
+- `fadeIn`
+- `fadeOut`
+- `slideInUp`
+- `slideInDown`
+- `slideInLeft`
+- `slideInRight`
+- `scaleIn`
+- `springIn`
+
+## Render using a template
+
+```http
+POST /render
+Content-Type: application/json
 ```
-
-The service returns the rendered MP4 as the HTTP response.
-
-## Railway
-
-The service listens on the Railway-provided `PORT`.
-
-For private networking from another service in the same Railway project/environment:
-
-```text
-http://cr8or-reel:<PORT>/render
-```
-
-Railway commonly provides port 8080 at runtime. Do not override Railway's `PORT` variable manually.
-
-
-## Browser runtime
-
-The Docker image installs Debian Chromium and its runtime libraries before running
-`remotion browser ensure`. This is intentional: Remotion's downloaded Chrome
-headless shell dynamically links against system libraries such as `libnspr4`.
-
-
-## EdventurePromo template
-
-The renderer includes an `EdventurePromo` Remotion composition designed from the
-provided EdVenture reference artwork.
-
-It expects:
 
 ```json
 {
-  "template": "EdventurePromo",
-  "width": 1080,
-  "height": 1920,
-  "fps": 30,
-  "duration": 8,
+  "templateId": "edventure-promo",
   "data": {
-    "bgImage": "https://example.com/background.jpg",
-    "headline": "Cambridge nu se pregătește doar pe hârtie.",
-    "buttonText": "Programează evaluarea gratuită"
+    "headline": "A generated headline",
+    "buttonText": "Learn more",
+    "product": {
+      "name": "Cambridge Courses"
+    }
   }
 }
 ```
 
-Animation sequence:
-1. Background image is visible immediately.
-2. Orange gradient fades up from the bottom.
-3. Headline appears character by character.
-4. White CTA button slides upward into view after the headline.
+The renderer resolves placeholders before passing the template to Remotion.
 
-The template uses `data.bgImage`, so the top-level `background` field is not
-required for this template.
+## Legacy renderer
+
+The existing generic `/render` mode remains available:
+
+```json
+{
+  "background": "https://example.com/background.mp4",
+  "elements": [
+    {
+      "type": "text",
+      "x": 100,
+      "y": 400,
+      "width": 800,
+      "height": 150,
+      "text": "Hello"
+    }
+  ],
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "duration": 8
+}
+```
+
+The existing `EdventurePromo` Remotion composition remains available for backwards compatibility.
+
+## Production persistence
+
+The first editor implementation stores template JSON on the application filesystem. On an ephemeral hosting platform, filesystem changes may not survive a redeploy.
+
+For production, the intended next persistence layer is either:
+
+1. Git-backed template storage, or
+2. the Notion Templates database.
+
+The renderer API remains independent of that persistence decision.
+
+
+## GitHub template persistence
+
+When `GITHUB_TOKEN` is configured, the template editor uses GitHub as its persistent template store.
+
+Set these environment variables:
+
+```text
+GITHUB_TOKEN=...
+GITHUB_REPO_OWNER=deputy-proxy
+GITHUB_REPO_NAME=cr8or-reel
+GITHUB_REPO_BRANCH=main
+GITHUB_TEMPLATE_DIR=data/templates
+```
+
+The token is used **only by the server** and is never exposed to the browser.
+
+### Behavior
+
+- `/api/templates` reads templates directly from GitHub.
+- `/api/templates/:id` reads the selected template from GitHub.
+- Saving an existing template updates its JSON file through the GitHub Contents API and creates a Git commit.
+- Saving a new template creates a new JSON file and Git commit.
+- If `GITHUB_TOKEN` is absent, the application falls back to the local filesystem.
+
+The GitHub token should have the minimum repository contents permission required to read and write files in the repository. Do not put the token in frontend code or commit it to the repository.

@@ -1,6 +1,7 @@
 import React from "react";
 import { Composition } from "remotion";
 import { VideoComposition } from "./VideoComposition.jsx";
+import { TemplateComposition } from "./TemplateComposition.jsx";
 import { EdventurePromo } from "./templates/EdventurePromo.jsx";
 
 export const RemotionRoot = () => {
@@ -20,6 +21,30 @@ export const RemotionRoot = () => {
           height: 1920,
           fps: 30,
           duration: 30
+        }}
+      />
+
+      <Composition
+        id="Template"
+        component={TemplateComposition}
+        width={1080}
+        height={1920}
+        fps={30}
+        durationInFrames={240}
+        defaultProps={{
+          template: {
+            canvas: {
+              width: 1080,
+              height: 1920,
+              fps: 30,
+              duration: 8
+            },
+            background: {
+              color: "#000000"
+            },
+            elements: []
+          },
+          data: {}
         }}
       />
 

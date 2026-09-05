@@ -27,7 +27,10 @@ function animatedStyle(element, frame, fps) {
   let scale = element.scale ?? 1;
   let rotation = element.rotation ?? 0;
 
-  const fadeFrames = Math.max(1, Math.min(Math.round(fps * 0.5), durationFrames));
+  const fadeFrames = Math.max(
+    1,
+    Math.min(Math.round(fps * 0.5), durationFrames)
+  );
 
   if (animation === "fadeIn") {
     opacity *= interpolate(localFrame, [0, fadeFrames], [0, 1], {
@@ -84,9 +87,7 @@ function animatedStyle(element, frame, fps) {
     const progress = spring({
       frame: Math.max(0, localFrame),
       fps,
-      config: {
-        damping: 200
-      }
+      config: { damping: 200 }
     });
     scale *= interpolate(progress, [0, 1], [0.7, 1]);
     opacity *= progress;
@@ -146,10 +147,7 @@ function ImageElement({ element, frame, fps }) {
   );
 }
 
-export const VideoComposition = ({
-  background,
-  elements = []
-}) => {
+export const VideoComposition = ({ background, elements = [] }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -169,11 +167,13 @@ export const VideoComposition = ({
         />
       ) : null}
 
-      {elements.map((element) => {
+      {elements.map((element, index) => {
+        const key = element.id || `element-${index}`;
+
         if (element.type === "text") {
           return (
             <TextElement
-              key={element.id || `text-${frame}-${Math.random()}`}
+              key={key}
               element={element}
               frame={frame}
               fps={fps}
@@ -184,7 +184,7 @@ export const VideoComposition = ({
         if (element.type === "image") {
           return (
             <ImageElement
-              key={element.id || `image-${frame}-${Math.random()}`}
+              key={key}
               element={element}
               frame={frame}
               fps={fps}

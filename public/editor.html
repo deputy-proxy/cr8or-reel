@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>cr8or-reel Template Editor</title>
+  <link rel="stylesheet" href="/editor.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">cr8or<span>-reel</span></div>
+
+      <label class="field">
+        <span>Project</span>
+        <select id="projectSelect"></select>
+      </label>
+
+      <div class="section-title">Templates</div>
+      <div id="templateList" class="template-list"></div>
+
+      <button id="newTemplate" class="secondary full">+ New template</button>
+    </aside>
+
+    <main class="workspace">
+      <header class="toolbar">
+        <div>
+          <div class="eyebrow">VISUAL TEMPLATE EDITOR</div>
+          <h1 id="templateName">Template</h1>
+        </div>
+        <div class="toolbar-actions">
+          <button id="addText" class="secondary">+ Text</button>
+          <button id="addImage" class="secondary">+ Image</button>
+          <button id="addShape" class="secondary">+ Shape</button>
+          <button id="saveTemplate" class="primary">Save</button>
+          <button id="renderTemplate" class="primary">Render MP4</button>
+        </div>
+      </header>
+
+      <div class="editor-grid">
+        <section class="canvas-panel">
+          <div class="canvas-wrap">
+            <div id="canvas" class="canvas"></div>
+          </div>
+          <div class="timeline">
+            <div class="timeline-label">Layers</div>
+            <div id="timelineLayers" class="timeline-layers"></div>
+          </div>
+        </section>
+
+        <aside class="inspector">
+          <div class="section-title">Template</div>
+          <label class="field">
+            <span>Name</span>
+            <input id="nameInput">
+          </label>
+          <label class="field">
+            <span>Project</span>
+            <select id="templateProject"></select>
+          </label>
+
+          <div class="inspector-divider"></div>
+          <div class="section-title">Canvas</div>
+          <div class="two-col">
+            <label class="field"><span>Width</span><input id="widthInput" type="number"></label>
+            <label class="field"><span>Height</span><input id="heightInput" type="number"></label>
+            <label class="field"><span>FPS</span><input id="fpsInput" type="number"></label>
+            <label class="field"><span>Duration</span><input id="durationInput" type="number" step="0.1"></label>
+          </div>
+
+          <div class="inspector-divider"></div>
+          <div class="section-title">Selected layer</div>
+          <div id="emptyInspector" class="empty">Select a layer on the canvas or in the layer list.</div>
+          <div id="layerInspector" hidden>
+            <label class="field"><span>Type</span><input id="layerType" disabled></label>
+            <label class="field"><span>Text / source</span><textarea id="layerText" rows="3"></textarea></label>
+            <div class="two-col">
+              <label class="field"><span>X</span><input id="layerX" type="number"></label>
+              <label class="field"><span>Y</span><input id="layerY" type="number"></label>
+              <label class="field"><span>Width</span><input id="layerWidth" type="number"></label>
+              <label class="field"><span>Height</span><input id="layerHeight" type="number"></label>
+              <label class="field"><span>Start</span><input id="layerStart" type="number" step="0.1"></label>
+              <label class="field"><span>End</span><input id="layerEnd" type="number" step="0.1"></label>
+              <label class="field"><span>Opacity</span><input id="layerOpacity" type="number" min="0" max="1" step="0.05"></label>
+              <label class="field"><span>Rotation</span><input id="layerRotation" type="number"></label>
+            </div>
+
+            <div id="textFields">
+              <label class="field"><span>Font size</span><input id="fontSize" type="number"></label>
+              <label class="field"><span>Font weight</span><input id="fontWeight" type="number"></label>
+              <label class="field"><span>Color</span><input id="layerColor" type="text"></label>
+              <label class="field"><span>Background</span><input id="layerBackground" type="text"></label>
+            </div>
+
+            <div id="imageFields">
+              <label class="field"><span>Image URL</span><input id="imageSrc" type="text"></label>
+              <label class="field"><span>Object fit</span>
+                <select id="objectFit">
+                  <option>cover</option>
+                  <option>contain</option>
+                  <option>fill</option>
+                </select>
+              </label>
+            </div>
+
+            <div id="shapeFields">
+              <label class="field"><span>Fill</span><input id="shapeBackground" type="text"></label>
+              <label class="field"><span>Border radius</span><input id="borderRadius" type="number"></label>
+            </div>
+
+            <label class="field">
+              <span>Animation</span>
+              <select id="animationType">
+                <option value="none">None</option>
+                <option value="fadeIn">Fade in</option>
+                <option value="fadeOut">Fade out</option>
+                <option value="slideInUp">Slide in up</option>
+                <option value="slideInDown">Slide in down</option>
+                <option value="slideInLeft">Slide in left</option>
+                <option value="slideInRight">Slide in right</option>
+                <option value="scaleIn">Scale in</option>
+                <option value="springIn">Spring in</option>
+              </select>
+            </label>
+
+            <button id="deleteLayer" class="danger full">Delete layer</button>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <script src="/editor.js"></script>
+</body>
+</html>
