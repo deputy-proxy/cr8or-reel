@@ -11,6 +11,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ffmpeg \
         chromium \
+        libegl1 \
+        libgl1 \
+        libgles2 \
+        mesa-vulkan-drivers \
     && rm -rf /var/lib/apt/lists/*
 
 RUN npx remotion browser ensure
@@ -22,6 +26,7 @@ USER node
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV RENDER_CONCURRENCY=4
+ENV REMOTION_GL=angle
 
 EXPOSE 3000
 

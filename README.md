@@ -203,3 +203,17 @@ The editor is organized around three extensible systems:
 - **Animation registry**: `src/animations/animation-registry.js`. Built-in reveal animations can be extended with custom animation functions stored in the template.
 
 The current background catalog is maintained in `public/backgrounds.js`. Lightfall uses the bundled OGL implementation; the remaining catalog entries use the bundled procedural background renderer so every catalog choice remains available without requiring arbitrary React layers.
+
+## React Bits WebGL backgrounds
+
+React Bits shader backgrounds are rendered with their real OGL/WebGL implementation in both the editor preview and Remotion MP4 renders. Remotion receives a deterministic frame clock (`time = frame / fps`) so shader animation does not depend on wall-clock timing. The server uses Chromium's WebGL backend via `REMOTION_GL` (default: `angle`); set it to another Remotion-supported backend such as `angle-egl`, `egl`, `swiftshader`, `swangle`, or `vulkan` if the deployment environment requires it.
+
+### WebGL smoke test
+
+After starting the server, run:
+
+```bash
+./scripts/test-lightfall-render.sh
+```
+
+This renders the bundled `lightfall-promo` template through the real `/render` endpoint and verifies that a non-empty MP4 is produced. If Chromium cannot initialize WebGL, the render should fail instead of silently substituting a different visual.

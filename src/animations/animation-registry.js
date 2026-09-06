@@ -41,7 +41,7 @@ export function animationStyle(element, frame, fps, customAnimations = []) {
   else if(type==='slideInDown'){y-=(1-p)*Number(a.distance??80);opacity*=p;}
   else if(type==='slideInLeft'){x-=(1-p)*Number(a.distance??80);opacity*=p;}
   else if(type==='slideInRight'){x+=(1-p)*Number(a.distance??80);opacity*=p;}
-  else if(type==='scaleIn'||type==='popIn'){scale*=Number(a.fromScale??(type==='popIn'?.65:.7)) + p*(1-Number(a.fromScale??(type==='popIn'?.65:.7)));opacity*=p;}
+  else if(type==='scaleIn'||type==='popIn'){scale*=Number(a.fromScale??(type==='popIn' ? .65 : .7)) + p*(1-Number(a.fromScale??(type==='popIn' ? .65 : .7)));opacity*=p;}
   else if(type==='springIn'){const sp=1-Math.exp(-8*Math.max(0,frame-start)/fps);scale*=.85+sp*.15;opacity*=sp;}
   else if(type==='blurIn'){filter=`blur(${(1-p)*Number(a.blur??16)}px)`;opacity*=p;}
   else if(type==='rotateIn'){rotation+=(1-p)*Number(a.degrees??-12);opacity*=p;}

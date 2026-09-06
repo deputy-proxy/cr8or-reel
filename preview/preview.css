@@ -13,3 +13,5 @@ html,body,#root{width:100%;height:100%;margin:0;overflow:hidden;background:#000}
 html,body,#root{width:100%;height:100%;margin:0}.fullscreen-preview{position:fixed;inset:0;background:#111}.preview-fullscreen{position:fixed;right:16px;top:16px;z-index:1000;padding:9px 13px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(0,0,0,.55);color:#fff;backdrop-filter:blur(10px);cursor:pointer}.fullscreen-preview:fullscreen .preview-fullscreen{display:block}
 
 .preview-root.fullscreen-preview{position:fixed;inset:0}
+
+.preview-root .remotion-player{width:100%!important;height:100%!important}

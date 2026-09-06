@@ -1,6 +1,9 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import { Renderer, Program, Mesh, Triangle } from "ogl";
 
+// React Bits Lightfall, adapted only at the rendering-clock boundary so the
+// same OGL shader can run interactively in the editor and deterministically
+// inside Remotion. The shader and visual parameters remain React Bits' implementation.
 const MAX_COLORS = 8;
 
 const hexToRGB = (hex) => {
@@ -202,53 +205,44 @@ export default function Lightfall({
   lightMode = false,
   mixBlendMode,
   time,
-  safeRender = false
+  renderMode = "preview"
 }) {
-  if (safeRender) {
-    const t = Number(time) || 0;
-    const c1 = colors?.[0] || color1;
-    const c2 = colors?.[1] || color2;
-    const c3 = colors?.[2] || color3;
-    const shift = ((t * Number(speed || 0.5) * 18) % 100);
-    return <div className={className || ""} style={{position:"absolute",inset:0,width:"100%",height:"100%",overflow:"hidden",background:backgroundColor,mixBlendMode}}>
-      <div style={{position:"absolute",inset:"-25%",background:[`radial-gradient(ellipse at ${20+shift/3}% 10%, ${c1} 0%, transparent 26%)`,`radial-gradient(ellipse at ${65-shift/4}% 38%, ${c2} 0%, transparent 25%)`,`radial-gradient(ellipse at ${42+shift/5}% 78%, ${c3} 0%, transparent 24%)`].join(","),filter:`blur(${Math.max(4,12*(2-Number(glow||1)))}px)`,opacity:Number(opacity)||1,transform:`rotate(${Math.sin(t*Number(speed||.5))*2}deg)`,}} />
-    </div>;
-  }
-
   const containerRef = useRef(null);
-  const [webglFailed, setWebglFailed] = useState(false);
-  const rafRef = useRef(null);
+  const rendererRef = useRef(null);
   const programRef = useRef(null);
   const geometryRef = useRef(null);
   const meshRef = useRef(null);
-  const rendererRef = useRef(null);
   const uniformsRef = useRef(null);
   const mouseTargetRef = useRef([0, 0]);
   const lastTimeRef = useRef(0);
+  const rafRef = useRef(null);
+  const resizeObserverRef = useRef(null);
+  const renderModeRef = useRef(renderMode);
   const timeRef = useRef(time);
-  const widthPropRef = useRef(width);
-  const heightPropRef = useRef(height);
-  widthPropRef.current = width;
-  heightPropRef.current = height;
+  const pausedRef = useRef(paused);
+  const widthRef = useRef(width);
+  const heightRef = useRef(height);
+
+  renderModeRef.current = renderMode;
   timeRef.current = time;
+  pausedRef.current = paused;
+  widthRef.current = width;
+  heightRef.current = height;
 
   useLayoutEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container) return undefined;
 
-    let renderer;
-    try {
-      renderer = new Renderer({
-        dpr: Math.min(1, Number(dpr) > 0 ? Number(dpr) : 1),
-        alpha: true,
-        antialias: true
-      });
-    } catch (error) {
-      console.warn("Lightfall WebGL unavailable, using CSS fallback", error);
-      setWebglFailed(true);
-      return;
-    }
+    const effectiveDpr = Number(dpr) > 0
+      ? Number(dpr)
+      : (typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1);
+    const renderer = new Renderer({
+      dpr: effectiveDpr,
+      alpha: true,
+      antialias: true
+    });
     rendererRef.current = renderer;
+
     const gl = renderer.gl;
     const canvas = gl.canvas;
     canvas.style.width = "100%";
@@ -259,11 +253,17 @@ export default function Lightfall({
     const palette = colors?.length ? colors : [color1, color2, color3];
     const { arr, count, avg } = prepColors(palette);
     const uniforms = {
-      iResolution: { value: [gl.drawingBufferWidth, gl.drawingBufferHeight, 1] },
+      iResolution: { value: [1, 1, 1] },
       iMouse: { value: [0, 0] },
       iTime: { value: 0 },
-      uColor0: { value: arr[0] }, uColor1: { value: arr[1] }, uColor2: { value: arr[2] }, uColor3: { value: arr[3] },
-      uColor4: { value: arr[4] }, uColor5: { value: arr[5] }, uColor6: { value: arr[6] }, uColor7: { value: arr[7] },
+      uColor0: { value: arr[0] },
+      uColor1: { value: arr[1] },
+      uColor2: { value: arr[2] },
+      uColor3: { value: arr[3] },
+      uColor4: { value: arr[4] },
+      uColor5: { value: arr[5] },
+      uColor6: { value: arr[6] },
+      uColor7: { value: arr[7] },
       uColorCount: { value: count },
       uBgColor: { value: hexToRGB(backgroundColor) },
       uMouseColor: { value: avg },
@@ -282,101 +282,153 @@ export default function Lightfall({
       uMouseRadius: { value: mouseRadius },
       uLightMode: { value: lightMode ? 1 : 0 }
     };
-
     uniformsRef.current = uniforms;
-    let program, geometry, mesh;
-    try {
-      program = new Program(gl, { vertex, fragment, uniforms });
-      geometry = new Triangle(gl);
-      mesh = new Mesh(gl, { geometry, program });
-    } catch (error) {
-      console.warn("Lightfall shader setup failed, using CSS fallback", error);
-      setWebglFailed(true);
-      try { if (typeof renderer.destroy === "function") renderer.destroy(); } catch {}
-      return;
-    }
+
+    const program = new Program(gl, { vertex, fragment, uniforms });
+    const geometry = new Triangle(gl);
+    const mesh = new Mesh(gl, { geometry, program });
     programRef.current = program;
     geometryRef.current = geometry;
     meshRef.current = mesh;
 
     const resize = () => {
       const rect = container.getBoundingClientRect();
-      const width = Math.max(1, rect.width || Number(widthPropRef.current) || 1);
-      const height = Math.max(1, rect.height || Number(heightPropRef.current) || 1);
-      renderer.setSize(width, height);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
+      const nextWidth = Math.max(1, rect.width || Number(widthRef.current) || 1);
+      const nextHeight = Math.max(1, rect.height || Number(heightRef.current) || 1);
+      renderer.setSize(nextWidth, nextHeight);
+      canvas.style.width = `${nextWidth}px`;
+      canvas.style.height = `${nextHeight}px`;
       uniforms.iResolution.value = [gl.drawingBufferWidth, gl.drawingBufferHeight, 1];
     };
+
     resize();
     const resizeFrame = requestAnimationFrame(resize);
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(resize) : null;
-    ro?.observe(container);
+    const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(resize) : null;
+    resizeObserver?.observe(container);
+    resizeObserverRef.current = resizeObserver;
 
-    const onPointerMove = (e) => {
+    const onPointerMove = (event) => {
       const rect = canvas.getBoundingClientRect();
       const scale = renderer.dpr || 1;
-      const x = (e.clientX - rect.left) * scale;
-      const y = (rect.height - (e.clientY - rect.top)) * scale;
+      const x = (event.clientX - rect.left) * scale;
+      const y = (rect.height - (event.clientY - rect.top)) * scale;
       mouseTargetRef.current = [x, y];
       if (mouseDampening <= 0) uniforms.iMouse.value = [x, y];
     };
-    if (mouseInteraction) canvas.addEventListener("pointermove", onPointerMove);
 
-    const loop = (t) => {
-      rafRef.current = requestAnimationFrame(loop);
-      uniforms.iTime.value = t * 0.001;
-      if (mouseDampening > 0) {
-        if (!lastTimeRef.current) lastTimeRef.current = t;
-        const dt = (t - lastTimeRef.current) / 1000;
-        lastTimeRef.current = t;
-        const factor = Math.min(1, 1 - Math.exp(-dt / Math.max(1e-4, mouseDampening)));
-        const target = mouseTargetRef.current;
-        const cur = uniforms.iMouse.value;
-        cur[0] += (target[0] - cur[0]) * factor;
-        cur[1] += (target[1] - cur[1]) * factor;
-      }
-      if (!paused) renderer.render({ scene: mesh });
+    if (mouseInteraction && renderModeRef.current !== "render") {
+      canvas.addEventListener("pointermove", onPointerMove);
+    }
+
+    const renderAt = (seconds) => {
+      if (!rendererRef.current || !meshRef.current || !uniformsRef.current) return;
+      uniforms.iTime.value = Number(seconds) || 0;
+      renderer.render({ scene: meshRef.current });
     };
-    // Browser/component previews animate themselves. Remotion supplies an explicit
-    // `time` prop, so deterministic rendering is handled by the effect below.
-    if (timeRef.current == null) rafRef.current = requestAnimationFrame(loop);
-    else if (!paused) {
-      try { renderer.render({ scene: mesh }); }
-      catch (error) { console.warn("Lightfall render failed, using CSS fallback", error); setWebglFailed(true); }
+
+    if (renderModeRef.current === "render") {
+      renderAt(timeRef.current);
+    } else {
+      const loop = (timestamp) => {
+        rafRef.current = requestAnimationFrame(loop);
+        if (pausedRef.current) return;
+
+        const previous = lastTimeRef.current || timestamp;
+        const dt = Math.max(0, (timestamp - previous) / 1000);
+        lastTimeRef.current = timestamp;
+
+        const uniformsNow = uniformsRef.current;
+        if (mouseDampening > 0) {
+          const factor = Math.min(1, 1 - Math.exp(-dt / Math.max(1e-4, mouseDampening)));
+          const target = mouseTargetRef.current;
+          const current = uniformsNow.iMouse.value;
+          current[0] += (target[0] - current[0]) * factor;
+          current[1] += (target[1] - current[1]) * factor;
+        }
+
+        renderAt(timestamp * 0.001);
+      };
+      rafRef.current = requestAnimationFrame(loop);
     }
 
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
       cancelAnimationFrame(resizeFrame);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (mouseInteraction) canvas.removeEventListener("pointermove", onPointerMove);
-      ro?.disconnect();
+      resizeObserver?.disconnect();
+      resizeObserverRef.current = null;
       if (canvas.parentElement === container) container.removeChild(canvas);
-      uniformsRef.current = null;
-      [program, geometry, mesh, renderer].forEach((obj) => {
-        if (obj && typeof obj.remove === "function") obj.remove();
-        if (obj && typeof obj.destroy === "function") obj.destroy();
-      });
-    };
-  }, [dpr, paused, colors, color1, color2, color3, backgroundColor, speed, streakCount, streakWidth, streakLength, glow, density, twinkle, zoom, backgroundGlow, opacity, mouseInteraction, mouseStrength, mouseRadius, mouseDampening, lightMode]);
 
-  useEffect(() => {
-    if (time == null || paused) return;
+      for (const [object, method] of [
+        [program, "remove"],
+        [geometry, "remove"],
+        [mesh, "remove"],
+        [renderer, "destroy"]
+      ]) {
+        try {
+          if (object && typeof object[method] === "function") object[method]();
+        } catch {}
+      }
+
+      rendererRef.current = null;
+      programRef.current = null;
+      geometryRef.current = null;
+      meshRef.current = null;
+      uniformsRef.current = null;
+    };
+  }, [
+    dpr,
+    colors,
+    color1,
+    color2,
+    color3,
+    backgroundColor,
+    speed,
+    streakCount,
+    streakWidth,
+    streakLength,
+    glow,
+    density,
+    twinkle,
+    zoom,
+    backgroundGlow,
+    opacity,
+    mouseInteraction,
+    mouseStrength,
+    mouseRadius,
+    mouseDampening,
+    lightMode,
+    renderMode
+  ]);
+
+  useLayoutEffect(() => {
+    if (renderMode !== "render" || paused) return;
     const renderer = rendererRef.current;
+    const mesh = meshRef.current;
     const uniforms = uniformsRef.current;
     const container = containerRef.current;
-    const mesh = meshRef.current;
-    if (!renderer || !uniforms || !container || !mesh) return;
+    if (!renderer || !mesh || !uniforms || !container) return;
+
     const rect = container.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      renderer.setSize(rect.width, rect.height);
-      uniforms.iResolution.value = [renderer.gl.drawingBufferWidth, renderer.gl.drawingBufferHeight, 1];
-    }
+    const nextWidth = Math.max(1, rect.width || Number(width) || 1);
+    const nextHeight = Math.max(1, rect.height || Number(height) || 1);
+    renderer.setSize(nextWidth, nextHeight);
+    uniforms.iResolution.value = [renderer.gl.drawingBufferWidth, renderer.gl.drawingBufferHeight, 1];
     uniforms.iTime.value = Number(time) || 0;
     renderer.render({ scene: mesh });
-  }, [time, paused]);
+  }, [time, paused, width, height, renderMode]);
 
-  const shellStyle = { position: "absolute", inset: 0, width: "100%", height: "100%", minWidth: 1, minHeight: 1, overflow: "hidden", background: backgroundColor, mixBlendMode };
-  if (webglFailed) return <div className={className || ""} style={shellStyle}><div style={{position:"absolute",inset:0,background:`radial-gradient(circle at 20% ${20 + ((Number(time)||0)*8)%60}%, ${colors?.[0] || "#5227FF"} 0%, transparent 28%), radial-gradient(circle at 72% ${55 + ((Number(time)||0)*5)%35}%, ${colors?.[1] || "#FF9FFC"} 0%, transparent 30%), linear-gradient(135deg, ${backgroundColor}, ${colors?.[2] || "#A6C8FF"})`,opacity}} /></div>;
+  const shellStyle = {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    minWidth: 1,
+    minHeight: 1,
+    overflow: "hidden",
+    background: backgroundColor,
+    mixBlendMode
+  };
+
   return <div ref={containerRef} className={className || ""} style={shellStyle} />;
 }

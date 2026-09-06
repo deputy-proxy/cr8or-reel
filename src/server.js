@@ -490,7 +490,10 @@ app.post("/render", async (req, res) => {
         inputProps,
         concurrency,
         chromiumOptions: {
-          disableWebSecurity: true
+          disableWebSecurity: true,
+          // WebGL is required by React Bits shader backgrounds. Keep this
+          // configurable because Chromium GL backends vary by host/container.
+          gl: process.env.REMOTION_GL || "angle"
         }
       });
 

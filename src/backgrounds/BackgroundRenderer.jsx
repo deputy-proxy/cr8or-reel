@@ -19,6 +19,20 @@ export function BackgroundRenderer({ background = {}, width=1080, height=1920, f
   }
   if (type === 'gradient') return <div style={{...shell,background:`linear-gradient(${Number(props.angle||135)}deg, ${props.color1||'#7c3aed'}, ${props.color2||'#06b6d4'}, ${props.color3||'#ec4899'})`}} />;
   const def=getBackgroundDefinition(type), merged={...(def?.defaults||{}),...props};
-  if(type==='lightfall') return <div style={shell}><Lightfall {...merged} width={width} height={height} time={time} dpr={1} safeRender={renderMode==='render'} /></div>;
+  if(type==='lightfall') {
+    // The same React Bits/OGL implementation is used in preview and export.
+    // Remotion drives it with frame/fps-derived time; the browser preview uses
+    // its own requestAnimationFrame clock.
+    return <div style={shell}>
+      <Lightfall
+        {...merged}
+        width={width}
+        height={height}
+        time={time}
+        dpr={renderMode === 'render' ? 1 : merged.dpr}
+        renderMode={renderMode}
+      />
+    </div>;
+  }
   return <div style={shell}><ProceduralBackground variant={type} {...merged} width={width} height={height} time={time}/></div>;
 }
