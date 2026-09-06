@@ -19,15 +19,11 @@ function App(){
      setStatus('Loading background…');
      const initial={type:backgroundId,props:{}};
      setBackground(initial); setStatus('');
-     const onMessage=e=>{ if(e.source!==parent)return; const m=e.data||{};
-       if(m.type==='background-preview:set'){setBackground(m.background||initial);setTime(Number(m.time||0));}
-       if(m.type==='background-preview:seek'){setTime(Number(m.time||0));}
-     };
-     window.addEventListener('message',onMessage);
-     parent.postMessage({type:'background-preview:ready'},'*');
+     const onMessage=e=>{if(e.source!==parent)return;const m=e.data||{};if(m.type==='background-preview:set'){setBackground(m.background||initial);setTime(Number(m.time||0));}if(m.type==='background-preview:seek')setTime(Number(m.time||0));};
+     window.addEventListener('message',onMessage);parent.postMessage({type:'background-preview:ready'},'*');
      return()=>window.removeEventListener('message',onMessage);
    }
-   if(embedded) return;
+   if(embedded){ parent.postMessage({type:'renderer-preview:ready'},'*'); return; }
    if(!id){setStatus('No template selected');return;}
    fetch(`/api/templates/${encodeURIComponent(id)}`).then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.error||`Request failed: ${r.status}`);return d}).then(setTemplate).catch(e=>setStatus(e.message));
  },[id,embedded,isBackground,backgroundId]);
