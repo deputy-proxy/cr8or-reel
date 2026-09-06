@@ -16,17 +16,17 @@
         <div class="brand">cr8or<span>-reel</span></div>
         <div class="top-select" id="projectSelectWrap">
           <button id="projectSelectButton" class="custom-select" type="button" aria-haspopup="listbox" aria-expanded="false">
-            <span class="custom-select-value">Project</span><span class="custom-select-chevron">⌄</span>
+            <span class="custom-select-value">Project</span><span class="custom-select-chevron" aria-hidden="true"></span>
           </button>
           <div id="projectSelectMenu" class="custom-select-menu" role="listbox" hidden></div>
         </div>
         <div class="top-select template-select" id="templateSelectWrap">
           <button id="templateSelectButton" class="custom-select" type="button" aria-haspopup="listbox" aria-expanded="false">
-            <span class="custom-select-value">Template</span><span class="custom-select-chevron">⌄</span>
+            <span class="custom-select-value">Template</span><span class="custom-select-chevron" aria-hidden="true"></span>
           </button>
           <div id="templateSelectMenu" class="custom-select-menu" role="listbox" hidden></div>
         </div>
-        <button id="newTemplate" class="top-icon-btn" title="New template">+</button>
+        <button id="newTemplate" class="top-icon-btn" title="New template" aria-label="New template">+</button>
       </div>
       <div class="top-actions">
         <button id="undoBtn" title="Undo (⌘/Ctrl+Z)">↶</button>
@@ -48,6 +48,7 @@
             <button class="add-card" data-add="video"><span class="add-icon">▶</span><span>Video</span></button>
             <button class="add-card" data-add="shape"><span class="add-icon">□</span><span>Shape</span></button>
             <button class="add-card" data-add="button"><span class="add-icon">▣</span><span>Button</span></button>
+            <button class="add-card" data-add="react"><span class="add-icon">⚛</span><span>React component</span></button>
           </div>
           <div class="asset-group"><div class="group-title">BACKGROUND</div>
             <label class="mini-field"><span>Color</span><input id="bgColor" type="text"></label>
@@ -114,6 +115,7 @@
             <div class="grid2"><label class="field"><span>Opacity</span><input id="layerOpacity" type="number" min="0" max="1" step="0.05"></label><label class="field"><span>Rotation</span><input id="layerRotation" type="number"></label></div>
             <div id="textFields"><div class="section-title">Typography</div><div class="grid2"><label class="field"><span>Font size</span><input id="fontSize" type="number"></label><label class="field"><span>Weight</span><input id="fontWeight" type="number"></label></div><label class="field"><span>Font</span><input id="fontFamily"></label><div class="grid2"><label class="field"><span>Color</span><input id="layerColor"></label><label class="field"><span>Align</span><select id="textAlign"><option>left</option><option>center</option><option>right</option></select></label></div></div>
             <div id="mediaFields"><div class="section-title">Media</div><label class="field"><span>Object fit</span><select id="objectFit"><option>cover</option><option>contain</option><option>fill</option></select></label></div>
+            <div id="reactFields" hidden><div class="section-title">React component</div><div id="reactProps"></div><label class="field"><span>Component code</span><textarea id="reactLayerCode" rows="8" spellcheck="false"></textarea></label><label class="field"><span>CSS</span><textarea id="reactLayerCss" rows="4" spellcheck="false"></textarea></label></div>
             <div id="shapeFields"><div class="section-title">Shape</div><div class="grid2"><label class="field"><span>Fill</span><input id="shapeBackground"></label><label class="field"><span>Radius</span><input id="borderRadius" type="number"></label></div></div>
             <div class="section-title">Animation</div><label class="field"><span>Entrance</span><select id="animationType"><option value="none">None</option><option value="fadeIn">Fade in</option><option value="fadeOut">Fade out</option><option value="slideInUp">Slide in up</option><option value="slideInDown">Slide in down</option><option value="slideInLeft">Slide in left</option><option value="slideInRight">Slide in right</option><option value="scaleIn">Scale in</option><option value="springIn">Spring in</option></select></label>
             <div class="grid2"><label class="field"><span>Anim. duration</span><input id="animationDuration" type="number" step="0.05"></label><label class="field"><span>Easing</span><select id="animationEasing"><option>easeOutCubic</option><option>linear</option><option>easeInOut</option></select></label></div>
@@ -124,6 +126,19 @@
     </section>
   </main>
 </div>
+
+<div id="reactModal" class="modal-backdrop" hidden>
+  <div class="modal-card react-component-modal">
+    <div class="modal-head"><div><strong>Add React component</strong><span>Paste a self-contained React component. Imports from installed packages are supported.</span></div><button id="closeReactModal" class="icon-btn">×</button></div>
+    <label class="field"><span>Name</span><input id="reactComponentName" placeholder="Lightfall"></label>
+    <label class="field"><span>React code</span><textarea id="reactComponentCode" rows="18" spellcheck="false" placeholder="export default function MyComponent(props) { ... }"></textarea></label>
+    <label class="field"><span>Optional CSS</span><textarea id="reactComponentCss" rows="5" spellcheck="false" placeholder=".my-component { ... }"></textarea></label>
+    <label class="field"><span>Optional controls JSON</span><textarea id="reactComponentControls" rows="8" spellcheck="false" placeholder='[{"name":"speed","label":"Speed","type":"number","default":0.5,"min":0,"max":2,"step":0.05}]'></textarea></label>
+    <div class="modal-note">If controls JSON is omitted, cr8or-reel infers controls from the component's destructured default props.</div>
+    <div class="modal-actions"><button id="cancelReactModal">Cancel</button><button id="createReactComponent" class="primary">Add component</button></div>
+  </div>
+</div>
+
 <script src="/editor.js"></script>
 </body>
 </html>

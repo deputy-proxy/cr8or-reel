@@ -1,6 +1,5 @@
-import React, { useEffect, useRef } from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import { Renderer, Program, Mesh, Triangle } from "ogl";
-import "./Lightfall.css";
 
 const MAX_COLORS = 8;
 
@@ -213,7 +212,7 @@ export default function Lightfall({
   const timeRef = useRef(time);
   timeRef.current = time;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -270,6 +269,7 @@ export default function Lightfall({
       uniforms.iResolution.value = [gl.drawingBufferWidth, gl.drawingBufferHeight, 1];
     };
     resize();
+    const resizeFrame = requestAnimationFrame(resize);
     const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(resize) : null;
     ro?.observe(container);
 
@@ -306,6 +306,7 @@ export default function Lightfall({
 
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      cancelAnimationFrame(resizeFrame);
       if (mouseInteraction) canvas.removeEventListener("pointermove", onPointerMove);
       ro?.disconnect();
       if (canvas.parentElement === container) container.removeChild(canvas);
@@ -316,5 +317,5 @@ export default function Lightfall({
     };
   }, [dpr, paused, colors, color1, color2, color3, backgroundColor, speed, streakCount, streakWidth, streakLength, glow, density, twinkle, zoom, backgroundGlow, opacity, mouseInteraction, mouseStrength, mouseRadius, mouseDampening, lightMode]);
 
-  return <div ref={containerRef} className={`lightfall-container ${className || ""}`} style={{ mixBlendMode }} />;
+  return <div ref={containerRef} className={className || ""} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", minWidth: 1, minHeight: 1, overflow: "hidden", background: backgroundColor, mixBlendMode }} />;
 }

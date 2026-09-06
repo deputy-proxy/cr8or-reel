@@ -166,11 +166,7 @@ export async function ensureTemplateStore() {
   await fs.mkdir(TEMPLATE_DIR, { recursive: true });
 }
 
-export async function listTemplates() {
-  if (githubEnabled()) {
-    return githubListTemplates();
-  }
-
+async function localListTemplates() {
   await ensureTemplateStore();
   const files = (await fs.readdir(TEMPLATE_DIR))
     .filter((file) => file.endsWith(".json"));
@@ -190,9 +186,37 @@ export async function listTemplates() {
     }
   }
 
-  return templates.sort((a, b) =>
-    String(a.name).localeCompare(String(b.name))
-  );
+  return templates;
+}
+
+export async function listTemplates() {
+  const localTemplates = await localListTemplates();
+
+  if (!githubEnabled()) {
+    return localTemplates.sort((a, b) =>
+      String(a.name).localeCompare(String(b.name))
+    );
+  }
+
+  try {
+    const githubTemplates = await githubListTemplates();
+    const byId = new Map(githubTemplates.map((template) => [String(template.id), template]));
+
+    // Keep bundled/local templates visible when GitHub has not received them
+    // yet. GitHub remains authoritative whenever the same id exists there.
+    for (const template of localTemplates) {
+      if (!byId.has(String(template.id))) byId.set(String(template.id), template);
+    }
+
+    return Array.from(byId.values()).sort((a, b) =>
+      String(a.name).localeCompare(String(b.name))
+    );
+  } catch (error) {
+    console.warn("GitHub template listing failed; using local templates:", error.message);
+    return localTemplates.sort((a, b) =>
+      String(a.name).localeCompare(String(b.name))
+    );
+  }
 }
 
 export async function getTemplate(id) {

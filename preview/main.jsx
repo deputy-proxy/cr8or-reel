@@ -1,95 +1,24 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-import { Player } from '@remotion/player';
-import { TemplateComposition } from '../src/TemplateComposition.jsx';
-import { ChromeCarousel } from '../src/templates/ChromeCarousel.jsx';
-import { EdventurePromo } from '../src/templates/EdventurePromo.jsx';
-import { LightfallTemplate } from '../src/templates/LightfallTemplate.jsx';
-import './preview.css';
+import React, { useEffect, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import { Player } from "@remotion/player";
+import { AbsoluteFill, useCurrentFrame } from "remotion";
+import { TemplateComposition } from "../src/TemplateComposition.jsx";
+import { ChromeCarousel } from "../src/templates/ChromeCarousel.jsx";
+import { EdventurePromo } from "../src/templates/EdventurePromo.jsx";
+import { UserReactLayer } from "../src/UserReactLayer.jsx";
+import "./preview.css";
 
-const RENDERERS = {
-  Template: TemplateComposition,
-  ChromeCarousel,
-  EdventurePromo,
-  LightfallTemplate,
-};
-
-function frameCount(template) {
-  return Math.max(1, Math.round(Number(template?.canvas?.duration || 8) * Number(template?.canvas?.fps || 30)));
+const RENDERERS = { Template: TemplateComposition, ChromeCarousel, EdventurePromo };
+function frameCount(template) { return Math.max(1, Math.round(Number(template?.canvas?.duration || 8) * Number(template?.canvas?.fps || 30))); }
+function ComponentComposition({ element }) { const frame=useCurrentFrame(); const fps=Number(element?.fps||30); return <AbsoluteFill style={{overflow:"hidden"}}><UserReactLayer element={element} frame={frame} fps={fps}/></AbsoluteFill>; }
+function ErrorBoundary({children,onError}) { const [error,setError]=useState(null); if(error) return <div className="status error">{error.message||String(error)}</div>; return <ErrorCatcher onError={e=>{setError(e);onError?.(e);}}>{children}</ErrorCatcher>; }
+class ErrorCatcher extends React.Component { constructor(p){super(p);this.state={error:null}} static getDerivedStateFromError(error){return {error}} componentDidCatch(error){this.props.onError?.(error)} render(){return this.state.error?<div className="status error">{this.state.error.message||String(this.state.error)}</div>:this.props.children;} }
+function App(){
+  const playerRef=useRef(null); const [template,setTemplate]=useState(null); const [element,setElement]=useState(null); const [status,setStatus]=useState("Loading preview…");
+  const query=new URLSearchParams(window.location.search); const id=query.get("template"); const componentId=(query.get("component")||"").toLowerCase(); const componentMode=Boolean(componentId);
+  useEffect(()=>{let alive=true;if(componentMode){setStatus("");setElement({type:"react",componentId,componentName:componentId,width:600,height:400,start:0,end:8,fps:30,reactProps:{}});return()=>{alive=false};} if(!id){setStatus("No template selected");return()=>{alive=false};} fetch(`/api/templates/${encodeURIComponent(id)}`).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`Request failed: ${r.status}`);return d}).then(t=>alive&&setTemplate(t)).catch(e=>alive&&setStatus(e.message));return()=>{alive=false};},[id,componentMode,componentId]);
+  useEffect(()=>{const onMessage=e=>{if(e.source!==window.parent)return;const m=e.data||{};if(componentMode&&m.type==='component-preview:set-element'&&m.element){setElement(m.element);setStatus("");requestAnimationFrame(()=>playerRef.current?.seekTo?.(Math.round(Number(m.time||0)*Number(m.element.fps||30))));return;}if(m.type==='renderer-preview:set-template'&&m.template){setTemplate(m.template);setStatus("");requestAnimationFrame(()=>playerRef.current?.seekTo?.(Math.round(Number(m.time||0)*Number(m.template.canvas?.fps||30))));return;}if(m.type==='renderer-preview:seek'){playerRef.current?.seekTo?.(Math.round(Number(m.time||0)*Number(template?.canvas?.fps||30)));}if(m.type==='component-preview:seek'){playerRef.current?.seekTo?.(Math.round(Number(m.time||0)*Number(element?.fps||30)));}if(m.type==='renderer-preview:play'||m.type==='component-preview:play')playerRef.current?.play?.();if(m.type==='renderer-preview:pause'||m.type==='component-preview:pause')playerRef.current?.pause?.();};window.addEventListener('message',onMessage);window.parent.postMessage({type:componentMode?'component-preview:ready':'renderer-preview:ready'},'*');return()=>window.removeEventListener('message',onMessage)},[componentMode,template,element]);
+  if(componentMode){const fps=Number(element?.fps||30),width=Number(element?.width||600),height=Number(element?.height||400);return <div className="preview-root"><ErrorBoundary onError={e=>window.parent.postMessage({type:'component-preview:error',message:e.message},'*')}><Player ref={playerRef} component={ComponentComposition} inputProps={{element}} durationInFrames={Math.max(1,Math.round(Number(element?.end||8)*fps))} compositionWidth={width} compositionHeight={height} fps={fps} controls={false} clickToPlay={false} doubleClickToFullscreen={false} style={{width:'100%',height:'100%'}}/></ErrorBoundary></div>}
+  if(!template)return <div className="status">{status}</div>; const Component=RENDERERS[template.renderer||'Template']||TemplateComposition; const width=Number(template.canvas?.width||1080),height=Number(template.canvas?.height||1920),fps=Number(template.canvas?.fps||30); return <div className="preview-root"><ErrorBoundary onError={e=>window.parent.postMessage({type:'renderer-preview:error',message:e.message},'*')}><Player ref={playerRef} component={Component} inputProps={{template,data:template.sampleData||{}}} durationInFrames={frameCount(template)} compositionWidth={width} compositionHeight={height} fps={fps} controls={false} clickToPlay={false} doubleClickToFullscreen={false} style={{width:'100%',height:'100%'}}/></ErrorBoundary><div className="renderer-badge">{template.renderer||'Template'}</div></div>;
 }
-
-function App() {
-  const playerRef = useRef(null);
-  const [template, setTemplate] = useState(null);
-  const [status, setStatus] = useState('Loading renderer…');
-  const query = new URLSearchParams(window.location.search);
-  const id = query.get('template');
-
-  useEffect(() => {
-    let alive = true;
-    if (!id) {
-      setStatus('No template selected');
-      return;
-    }
-    fetch(`/api/templates/${encodeURIComponent(id)}`)
-      .then(async r => {
-        const d = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(d.error || `Request failed: ${r.status}`);
-        return d;
-      })
-      .then(t => alive && setTemplate(t))
-      .catch(e => alive && setStatus(e.message));
-    return () => { alive = false; };
-  }, [id]);
-
-  useEffect(() => {
-    const onMessage = event => {
-      if (event.source !== window.parent) return;
-      const message = event.data || {};
-      if (message.type === 'renderer-preview:set-template' && message.template) {
-        setTemplate(message.template);
-        setStatus('');
-        requestAnimationFrame(() => playerRef.current?.seekTo?.(Math.round(Number(message.time || 0) * Number(message.template.canvas?.fps || 30))));
-      }
-      if (message.type === 'renderer-preview:seek') {
-        const fps = Number(template?.canvas?.fps || 30);
-        playerRef.current?.seekTo?.(Math.round(Number(message.time || 0) * fps));
-      }
-      if (message.type === 'renderer-preview:play') playerRef.current?.play?.();
-      if (message.type === 'renderer-preview:pause') playerRef.current?.pause?.();
-    };
-    window.addEventListener('message', onMessage);
-    window.parent.postMessage({ type: 'renderer-preview:ready' }, '*');
-    return () => window.removeEventListener('message', onMessage);
-  }, [template]);
-
-  if (!template) return <div className="status">{status}</div>;
-
-  const rendererName = template.renderer || 'Template';
-  const Component = RENDERERS[rendererName] || TemplateComposition;
-  const width = Number(template.canvas?.width || 1080);
-  const height = Number(template.canvas?.height || 1920);
-  const fps = Number(template.canvas?.fps || 30);
-  const durationInFrames = frameCount(template);
-
-  return (
-    <div className="preview-root">
-      <Player
-        ref={playerRef}
-        component={Component}
-        inputProps={{ template, data: template.sampleData || {} }}
-        durationInFrames={durationInFrames}
-        compositionWidth={width}
-        compositionHeight={height}
-        fps={fps}
-        controls={false}
-        clickToPlay={false}
-        doubleClickToFullscreen={false}
-        style={{ width: '100%', height: '100%' }}
-      />
-      <div className="renderer-badge">{rendererName}</div>
-    </div>
-  );
-}
-
-createRoot(document.getElementById('root')).render(<App />);
+createRoot(document.getElementById('root')).render(<App/>);

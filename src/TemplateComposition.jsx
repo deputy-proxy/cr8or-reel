@@ -8,6 +8,7 @@ import {
   useCurrentFrame,
   useVideoConfig
 } from "remotion";
+import { UserReactLayer } from "./UserReactLayer.jsx";
 
 function clamp(value, min = 0, max = 1) {
   return Math.min(max, Math.max(min, value));
@@ -309,6 +310,14 @@ export const TemplateComposition = ({
                   frame={frame}
                   fps={fps}
                 />
+              );
+            }
+
+            if (element.type === "react") {
+              return (
+                <div key={key} style={{ ...getAnimationStyle(element, frame, fps), overflow: "hidden" }}>
+                  <UserReactLayer element={element} frame={frame} fps={fps} />
+                </div>
               );
             }
 
