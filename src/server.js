@@ -329,15 +329,33 @@ app.post("/render", async (req, res) => {
   try {
     if (RENDER_SECRET) {
       const suppliedSecret = req.get("x-render-secret") || "";
+      let secretValid = false;
 
-      if (
-        !suppliedSecret ||
-        suppliedSecret.length !== RENDER_SECRET.length ||
-        !crypto.timingSafeEqual(
+      if (suppliedSecret && suppliedSecret.length === RENDER_SECRET.length) {
+        secretValid = crypto.timingSafeEqual(
           Buffer.from(suppliedSecret),
           Buffer.from(RENDER_SECRET)
-        )
-      ) {
+        );
+      }
+
+      // The built-in editor calls /render from the same origin and cannot
+      // safely embed RENDER_SECRET in browser JavaScript. Allow a genuine
+      // same-origin browser request while still requiring the secret for
+      // cross-origin/API clients.
+      const host = req.get("host");
+      const origin = req.get("origin") || "";
+      const referer = req.get("referer") || "";
+      let sameOrigin = req.get("sec-fetch-site") === "same-origin";
+
+      try {
+        if (!sameOrigin && origin) sameOrigin = new URL(origin).host === host;
+      } catch {}
+
+      try {
+        if (!sameOrigin && referer) sameOrigin = new URL(referer).host === host;
+      } catch {}
+
+      if (!secretValid && !sameOrigin) {
         return res.status(401).json({ error: "Unauthorized" });
       }
     }
