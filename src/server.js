@@ -212,6 +212,24 @@ app.get("/api/projects", async (_req, res) => {
   }
 });
 
+app.get("/api/backgrounds/:id/code", async (req, res) => {
+  try {
+    const id = String(req.params.id || "").trim().toLowerCase();
+    const files = {
+      lightfall: path.join(rootDir, "src", "backgrounds", "Lightfall.jsx"),
+      solid: path.join(rootDir, "src", "backgrounds", "BackgroundRenderer.jsx"),
+      gradient: path.join(rootDir, "src", "backgrounds", "BackgroundRenderer.jsx"),
+      image: path.join(rootDir, "src", "backgrounds", "BackgroundRenderer.jsx"),
+      video: path.join(rootDir, "src", "backgrounds", "BackgroundRenderer.jsx")
+    };
+    const target = files[id] || path.join(rootDir, "src", "backgrounds", "ProceduralBackground.jsx");
+    const code = await fs.readFile(target, "utf8");
+    res.json({ id, filename: path.basename(target), code });
+  } catch (error) {
+    res.status(404).json({ error: `Background source not found: ${req.params.id}` });
+  }
+});
+
 app.get("/api/templates", async (_req, res) => {
   try {
     const templates = await listTemplates();
