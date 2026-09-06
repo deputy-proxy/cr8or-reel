@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "id": "edventure-promo",
   "name": "EdVenture Promo",
   "project": "EdVenture",
@@ -14,12 +14,15 @@
     "product": {
       "name": "Cambridge Courses"
     },
-    "headline": "Cambridge nu se pregătește doar pe hârtie.",
-    "buttonText": "Programează evaluarea gratuită",
+    "headline": "Cambridge nu se preg\u0103te\u0219te doar pe h\u00e2rtie.",
+    "buttonText": "Programeaz\u0103 evaluarea gratuit\u0103",
     "image": ""
   },
   "background": {
-    "color": "#F36A21"
+    "type": "solid",
+    "props": {
+      "color": "#F36A21"
+    }
   },
   "elements": [
     {
@@ -76,5 +79,8 @@
         "easing": "easeOutCubic"
       }
     }
-  ]
+  ],
+  "animations": {
+    "custom": []
+  }
 }

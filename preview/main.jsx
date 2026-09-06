@@ -1,24 +1,55 @@
-import React, { useEffect, useRef, useState } from "react";
-import { createRoot } from "react-dom/client";
-import { Player } from "@remotion/player";
-import { AbsoluteFill, useCurrentFrame } from "remotion";
-import { TemplateComposition } from "../src/TemplateComposition.jsx";
-import { ChromeCarousel } from "../src/templates/ChromeCarousel.jsx";
-import { EdventurePromo } from "../src/templates/EdventurePromo.jsx";
-import { UserReactLayer } from "../src/UserReactLayer.jsx";
-import "./preview.css";
+import React, { useEffect, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { Player } from '@remotion/player';
+import { TemplateComposition } from '../src/TemplateComposition.jsx';
+import { ChromeCarousel } from '../src/templates/ChromeCarousel.jsx';
+import { EdventurePromo } from '../src/templates/EdventurePromo.jsx';
+import { BackgroundRenderer } from '../src/backgrounds/BackgroundRenderer.jsx';
+import './preview.css';
 
-const RENDERERS = { Template: TemplateComposition, ChromeCarousel, EdventurePromo };
-function frameCount(template) { return Math.max(1, Math.round(Number(template?.canvas?.duration || 8) * Number(template?.canvas?.fps || 30))); }
-function ComponentComposition({ element }) { const frame=useCurrentFrame(); const fps=Number(element?.fps||30); return <AbsoluteFill style={{overflow:"hidden"}}><UserReactLayer element={element} frame={frame} fps={fps}/></AbsoluteFill>; }
-function ErrorBoundary({children,onError}) { const [error,setError]=useState(null); if(error) return <div className="status error">{error.message||String(error)}</div>; return <ErrorCatcher onError={e=>{setError(e);onError?.(e);}}>{children}</ErrorCatcher>; }
-class ErrorCatcher extends React.Component { constructor(p){super(p);this.state={error:null}} static getDerivedStateFromError(error){return {error}} componentDidCatch(error){this.props.onError?.(error)} render(){return this.state.error?<div className="status error">{this.state.error.message||String(this.state.error)}</div>:this.props.children;} }
+const RENDERERS={Template:TemplateComposition,ChromeCarousel,EdventurePromo};
+const frames=t=>Math.max(1,Math.round(Number(t?.canvas?.duration||8)*Number(t?.canvas?.fps||30)));
+class ErrorBoundary extends React.Component{constructor(p){super(p);this.state={error:null}}static getDerivedStateFromError(error){return{error}}componentDidCatch(error){this.props.onError?.(error)}render(){return this.state.error?<div className="status error">{this.state.error.message||String(this.state.error)}</div>:this.props.children}}
 function App(){
-  const playerRef=useRef(null); const [template,setTemplate]=useState(null); const [element,setElement]=useState(null); const [status,setStatus]=useState("Loading preview…");
-  const query=new URLSearchParams(window.location.search); const id=query.get("template"); const componentId=(query.get("component")||"").toLowerCase(); const componentMode=Boolean(componentId);
-  useEffect(()=>{let alive=true;if(componentMode){setStatus("");setElement({type:"react",componentId,componentName:componentId,width:600,height:400,start:0,end:8,fps:30,reactProps:{}});return()=>{alive=false};} if(!id){setStatus("No template selected");return()=>{alive=false};} fetch(`/api/templates/${encodeURIComponent(id)}`).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`Request failed: ${r.status}`);return d}).then(t=>alive&&setTemplate(t)).catch(e=>alive&&setStatus(e.message));return()=>{alive=false};},[id,componentMode,componentId]);
-  useEffect(()=>{const onMessage=e=>{if(e.source!==window.parent)return;const m=e.data||{};if(componentMode&&m.type==='component-preview:set-element'&&m.element){setElement(m.element);setStatus("");requestAnimationFrame(()=>playerRef.current?.seekTo?.(Math.round(Number(m.time||0)*Number(m.element.fps||30))));return;}if(m.type==='renderer-preview:set-template'&&m.template){setTemplate(m.template);setStatus("");requestAnimationFrame(()=>playerRef.current?.seekTo?.(Math.round(Number(m.time||0)*Number(m.template.canvas?.fps||30))));return;}if(m.type==='renderer-preview:seek'){playerRef.current?.seekTo?.(Math.round(Number(m.time||0)*Number(template?.canvas?.fps||30)));}if(m.type==='component-preview:seek'){playerRef.current?.seekTo?.(Math.round(Number(m.time||0)*Number(element?.fps||30)));}if(m.type==='renderer-preview:play'||m.type==='component-preview:play')playerRef.current?.play?.();if(m.type==='renderer-preview:pause'||m.type==='component-preview:pause')playerRef.current?.pause?.();};window.addEventListener('message',onMessage);window.parent.postMessage({type:componentMode?'component-preview:ready':'renderer-preview:ready'},'*');return()=>window.removeEventListener('message',onMessage)},[componentMode,template,element]);
-  if(componentMode){const fps=Number(element?.fps||30),width=Number(element?.width||600),height=Number(element?.height||400);return <div className="preview-root"><ErrorBoundary onError={e=>window.parent.postMessage({type:'component-preview:error',message:e.message},'*')}><Player ref={playerRef} component={ComponentComposition} inputProps={{element}} durationInFrames={Math.max(1,Math.round(Number(element?.end||8)*fps))} compositionWidth={width} compositionHeight={height} fps={fps} controls={false} clickToPlay={false} doubleClickToFullscreen={false} style={{width:'100%',height:'100%'}}/></ErrorBoundary></div>}
-  if(!template)return <div className="status">{status}</div>; const Component=RENDERERS[template.renderer||'Template']||TemplateComposition; const width=Number(template.canvas?.width||1080),height=Number(template.canvas?.height||1920),fps=Number(template.canvas?.fps||30); return <div className="preview-root"><ErrorBoundary onError={e=>window.parent.postMessage({type:'renderer-preview:error',message:e.message},'*')}><Player ref={playerRef} component={Component} inputProps={{template,data:template.sampleData||{}}} durationInFrames={frameCount(template)} compositionWidth={width} compositionHeight={height} fps={fps} controls={false} clickToPlay={false} doubleClickToFullscreen={false} style={{width:'100%',height:'100%'}}/></ErrorBoundary><div className="renderer-badge">{template.renderer||'Template'}</div></div>;
+ const playerRef=useRef(null), [template,setTemplate]=useState(null), [time,setTime]=useState(0), [status,setStatus]=useState('Waiting for template…'), [fullscreen,setFullscreen]=useState(false), [background,setBackground]=useState(null);
+ const q=new URLSearchParams(location.search), id=q.get('template'), backgroundId=q.get('background'), embedded=q.get('embedded')==='1';
+ const isBackground=Boolean(backgroundId);
+ useEffect(()=>{
+   if(isBackground){
+     setStatus('Loading background…');
+     const initial={type:backgroundId,props:{}};
+     setBackground(initial); setStatus('');
+     const onMessage=e=>{ if(e.source!==parent)return; const m=e.data||{};
+       if(m.type==='background-preview:set'){setBackground(m.background||initial);setTime(Number(m.time||0));}
+       if(m.type==='background-preview:seek'){setTime(Number(m.time||0));}
+     };
+     window.addEventListener('message',onMessage);
+     parent.postMessage({type:'background-preview:ready'},'*');
+     return()=>window.removeEventListener('message',onMessage);
+   }
+   if(embedded) return;
+   if(!id){setStatus('No template selected');return;}
+   fetch(`/api/templates/${encodeURIComponent(id)}`).then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.error||`Request failed: ${r.status}`);return d}).then(setTemplate).catch(e=>setStatus(e.message));
+ },[id,embedded,isBackground,backgroundId]);
+ useEffect(()=>{
+   if(isBackground)return;
+   const onMessage=e=>{if(e.source!==parent)return;const m=e.data||{};
+     if(m.type==='renderer-preview:set-template'){
+       setTemplate(m.template||null);setTime(Number(m.time||0));
+       requestAnimationFrame(()=>playerRef.current?.seekTo?.(Math.round(Number(m.time||0)*Number(m.template?.canvas?.fps||30))));
+     }
+     if(m.type==='renderer-preview:seek'){setTime(Number(m.time||0));playerRef.current?.seekTo?.(Math.round(Number(m.time||0)*Number(template?.canvas?.fps||30)));}
+     if(m.type==='renderer-preview:play')playerRef.current?.play?.();
+     if(m.type==='renderer-preview:pause')playerRef.current?.pause?.();
+   };
+   window.addEventListener('message',onMessage);
+   parent.postMessage({type:'renderer-preview:ready'},'*');
+   return()=>window.removeEventListener('message',onMessage);
+ },[isBackground,template]);
+ const enterFullscreen=()=>{document.documentElement.requestFullscreen?.().then(()=>setFullscreen(true)).catch(()=>{});};
+ if(isBackground && background) return <div className="background-preview-root"><BackgroundRenderer background={background} width={1080} height={1920} fps={30} time={time} native renderMode="preview" /></div>;
+ if(!template)return <div className="status">{status}</div>;
+ const Component=RENDERERS[template.renderer||'Template']||TemplateComposition;const width=Number(template.canvas?.width||1080),height=Number(template.canvas?.height||1920),fps=Number(template.canvas?.fps||30);
+ return <div className="preview-root fullscreen-preview"><ErrorBoundary onError={e=>parent.postMessage({type:'renderer-preview:error',message:e.message},'*')}><Player ref={playerRef} component={Component} inputProps={{template,data:template.sampleData||{}}} durationInFrames={frames(template)} compositionWidth={width} compositionHeight={height} fps={fps} controls={false} clickToPlay={false} style={{width:'100%',height:'100%'}}/></ErrorBoundary><button className="preview-fullscreen" onClick={enterFullscreen}>{fullscreen?'Exit fullscreen':'Fullscreen'}</button></div>;
 }
 createRoot(document.getElementById('root')).render(<App/>);

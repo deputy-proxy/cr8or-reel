@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "id": "chrome-3d-carousel",
   "name": "Chrome 3D Carousel",
   "project": "Personal",
@@ -50,7 +50,10 @@
     ]
   },
   "background": {
-    "color": "#f5dfe2"
+    "type": "solid",
+    "props": {
+      "color": "#f5dfe2"
+    }
   },
   "elements": [
     {
@@ -68,7 +71,11 @@
       "objectFit": "cover",
       "start": 0,
       "end": 2.325,
-      "animation": { "type": "carousel", "duration": 0.55, "easing": "easeInOut" }
+      "animation": {
+        "type": "carousel",
+        "duration": 0.55,
+        "easing": "easeInOut"
+      }
     },
     {
       "id": "slide-2-artwork",
@@ -85,7 +92,11 @@
       "objectFit": "cover",
       "start": 2.325,
       "end": 4.65,
-      "animation": { "type": "carousel", "duration": 0.55, "easing": "easeInOut" }
+      "animation": {
+        "type": "carousel",
+        "duration": 0.55,
+        "easing": "easeInOut"
+      }
     },
     {
       "id": "slide-3-artwork",
@@ -102,7 +113,11 @@
       "objectFit": "cover",
       "start": 4.65,
       "end": 6.975,
-      "animation": { "type": "carousel", "duration": 0.55, "easing": "easeInOut" }
+      "animation": {
+        "type": "carousel",
+        "duration": 0.55,
+        "easing": "easeInOut"
+      }
     },
     {
       "id": "slide-4-artwork",
@@ -119,7 +134,14 @@
       "objectFit": "cover",
       "start": 6.975,
       "end": 9.3,
-      "animation": { "type": "carousel", "duration": 0.55, "easing": "easeInOut" }
+      "animation": {
+        "type": "carousel",
+        "duration": 0.55,
+        "easing": "easeInOut"
+      }
     }
-  ]
+  ],
+  "animations": {
+    "custom": []
+  }
 }

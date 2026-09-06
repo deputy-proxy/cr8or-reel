@@ -252,8 +252,28 @@ export async function saveTemplate(template) {
 
   if (!id) throw new Error("Template id is required");
 
+  let background = template.background || { type: "solid", props: { color: "#111111" } };
+  const elements = Array.isArray(template.elements) ? template.elements : [];
+  const legacyLightfall = elements.find((element) =>
+    element?.type === "react" &&
+    String(element?.componentId || element?.react?.componentId || "").toLowerCase() === "lightfall"
+  );
+  if (legacyLightfall) {
+    background = {
+      type: "lightfall",
+      props: {
+        ...(legacyLightfall.react?.props || {}),
+        ...(legacyLightfall.reactProps || {})
+      }
+    };
+  } else if (!background.type) {
+    background = background.src
+      ? { type: "image", props: { src: background.src, objectFit: background.objectFit || "cover" } }
+      : { type: "solid", props: { color: background.color || "#111111" } };
+  }
+
   const normalized = {
-    version: 1,
+    version: 2,
     id,
     name: template.name || id,
     project: template.project || "",
@@ -265,10 +285,13 @@ export async function saveTemplate(template) {
       duration: Number(template.canvas?.duration || 8)
     },
     sampleData: template.sampleData || {},
-    background: template.background || null,
+    background,
+    animations: {
+      custom: Array.isArray(template.animations?.custom) ? template.animations.custom : []
+    },
     renderer: template.renderer || "",
     chromeCarousel: template.chromeCarousel || null,
-    elements: Array.isArray(template.elements) ? template.elements : []
+    elements: legacyLightfall ? elements.filter((element) => element !== legacyLightfall) : elements
   };
 
   if (githubEnabled()) {

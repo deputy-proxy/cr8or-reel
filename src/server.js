@@ -101,12 +101,16 @@ async function writeUserComponent({ id, code, css = "" }) {
   return safeId;
 }
 
-async function syncTemplateReactComponents(template) {
+async function ensureTemplateReactComponents(template) {
   for (const element of template?.elements || []) {
     if (element?.type !== "react" || !element.react?.code || !element.react?.componentId) continue;
-    const css = String(element.react.css || "");
-    const normalized = normalizeUserComponentSource(element.react.componentId, element.react.code, css);
-    await writeUserComponent({ id: normalized.safeId, code: normalized.source, css });
+    const { safeId } = normalizeUserComponentSource(element.react.componentId, element.react.code, element.react.css || "");
+    const target = path.join(USER_COMPONENT_DIR, `${safeId}.jsx`);
+    try {
+      await fs.access(target);
+    } catch {
+      await writeUserComponent({ id: safeId, code: element.react.code, css: element.react.css || "" });
+    }
   }
 }
 
@@ -241,10 +245,16 @@ app.get("/api/templates/:id/code", async (req, res) => {
       return res.status(400).json({ error: "Invalid renderer" });
     }
 
-    const candidates = [
-      path.join(rootDir, "src", "templates", `${renderer}.jsx`),
-      path.join(rootDir, "src", `${renderer}.jsx`)
-    ];
+    const candidates = renderer === "Template"
+      ? [
+          path.join(rootDir, "src", "TemplateComposition.jsx"),
+          path.join(rootDir, "src", "templates", "Template.jsx"),
+          path.join(rootDir, "src", "Template.jsx")
+        ]
+      : [
+          path.join(rootDir, "src", "templates", `${renderer}.jsx`),
+          path.join(rootDir, "src", `${renderer}.jsx`)
+        ];
     let source = null;
     let filename = `${renderer}.jsx`;
     for (const candidate of candidates) {
@@ -339,7 +349,7 @@ app.post("/render", async (req, res) => {
     }
 
     if (template && typeof template === "object" && !Array.isArray(template)) {
-      await syncTemplateReactComponents(template);
+      await ensureTemplateReactComponents(template);
       const resolved = resolveObject(template, data);
       width = resolved.canvas?.width ?? width;
       height = resolved.canvas?.height ?? height;
@@ -348,7 +358,7 @@ app.post("/render", async (req, res) => {
       template = resolved;
       compositionId = resolved.renderer || "Template";
       elements = Array.isArray(resolved.elements) ? resolved.elements : elements;
-      background = resolved.background?.src || resolved.background?.color || background;
+      background = resolved.background || background;
       body.templateDefinition = resolved;
     } else if (templateId) {
       const definition = await getTemplate(templateId);
@@ -368,8 +378,7 @@ app.post("/render", async (req, res) => {
       template = resolved;
       compositionId = resolved.renderer || "Template";
       elements = resolved.elements;
-      background =
-        resolved.background?.src || resolved.background?.color || "";
+      background = resolved.background || "";
       body.templateDefinition = resolved;
     }
 
@@ -439,7 +448,8 @@ app.post("/render", async (req, res) => {
         height: numericHeight,
         fps: numericFps,
         duration: numericDuration,
-        templateDefinition: body.templateDefinition || null
+        templateDefinition: body.templateDefinition || null,
+        renderMode: "render"
       };
 
       const compositions = await getCompositions(serveUrl, {

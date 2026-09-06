@@ -193,3 +193,13 @@ The token is used **only by the server** and is never exposed to the browser.
 - If `GITHUB_TOKEN` is absent, the application falls back to the local filesystem.
 
 The GitHub token should have the minimum repository contents permission required to read and write files in the repository. Do not put the token in frontend code or commit it to the repository.
+
+## Composition editor architecture
+
+The editor is organized around three extensible systems:
+
+- **Background registry**: `src/backgrounds/background-registry.js`. A template has exactly one fixed, full-canvas background.
+- **Layer system**: Text, Shape, Button, Image and Video are normal movable/resizable layers above the background.
+- **Animation registry**: `src/animations/animation-registry.js`. Built-in reveal animations can be extended with custom animation functions stored in the template.
+
+The current background catalog is maintained in `public/backgrounds.js`. Lightfall uses the bundled OGL implementation; the remaining catalog entries use the bundled procedural background renderer so every catalog choice remains available without requiring arbitrary React layers.
