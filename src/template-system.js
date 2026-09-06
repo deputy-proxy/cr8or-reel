@@ -197,7 +197,11 @@ export async function listTemplates() {
 
 export async function getTemplate(id) {
   if (githubEnabled()) {
-    return githubGetTemplate(id);
+    const githubTemplate = await githubGetTemplate(id);
+    if (githubTemplate) return githubTemplate;
+    // Keep bundled templates available when GitHub has not received a
+    // newly-added template yet, or when a local development token points at
+    // a branch that does not contain the template.
   }
 
   await ensureTemplateStore();

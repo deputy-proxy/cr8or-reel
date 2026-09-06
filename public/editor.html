@@ -64,14 +64,18 @@
         <div class="canvas-toolbar">
           <div class="toolset"><button id="fitCanvas" class="tool active">Fit</button><button id="zoomOut" class="tool">−</button><span id="zoomValue">100%</span><button id="zoomIn" class="tool">+</button></div>
           <div class="canvas-meta"><span id="canvasSize">1080 × 1920</span><span>•</span><span id="fpsLabel">30 FPS</span></div>
-          <div class="toolset"><button id="jsonToggle" class="tool">{ } Code</button></div>
+          <div class="toolset"><button id="previewToggle" class="tool">▶ Preview</button><button id="jsonToggle" class="tool">{ } JSON</button><button id="codeToggle" class="tool">&lt;/&gt; Code</button></div>
         </div>
         <div id="stage" class="stage">
-          <div id="canvas" class="canvas"></div>
-          <div id="jsonEditor" class="json-editor" hidden>
+          <div id="canvas" class="canvas"></div><iframe id="rendererPreview" class="renderer-preview" title="React renderer preview" hidden></iframe>
+          <div id="jsonEditor" class="code-editor" hidden>
             <div class="code-head"><span>template.json</span><span id="jsonStatus">Valid JSON</span></div>
             <textarea id="jsonCode" spellcheck="false"></textarea>
             <div class="code-actions"><button id="formatJson">Format</button><button id="applyJson" class="primary">Apply JSON</button></div>
+          </div>
+          <div id="codeEditor" class="code-editor" hidden>
+            <div class="code-head"><span id="codeFilename">ChromeCarousel.jsx</span><span>React template</span></div>
+            <textarea id="reactCode" spellcheck="false" readonly></textarea>
           </div>
         </div>
         <div class="player-bar">

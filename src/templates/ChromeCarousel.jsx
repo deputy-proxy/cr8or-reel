@@ -11,186 +11,136 @@ import {
 const clamp = (value, min = 0, max = 1) =>
   Math.min(max, Math.max(min, value));
 
-const ease = Easing.bezier(0.22, 1, 0.36, 1);
+const transitionEase = Easing.bezier(0.65, 0, 0.35, 1);
 
-function transitionProgress(frame, start, duration) {
+function progressFor(frame, start, duration) {
   return clamp((frame - start) / Math.max(1, duration));
 }
 
-function renderableElements(template = {}, slideIndex) {
-  return (template.elements || [])
-    .filter((element) => Number(element.slide ?? -1) === slideIndex)
-    .slice()
-    .sort((a, b) => Number(a.zIndex || 0) - Number(b.zIndex || 0));
-}
-
-function layerStyle(element, width, height) {
-  return {
-    position: "absolute",
-    left: Number(element.x || 0),
-    top: Number(element.y || 0),
-    width: Number(element.width || 0),
-    height: Number(element.height || 0),
-    opacity: Number(element.opacity ?? 1),
-    zIndex: Number(element.zIndex || 1),
-    boxSizing: "border-box",
-    transform: `rotate(${Number(element.rotation || 0)}deg) scale(${Number(element.scale ?? 1)})`,
-    transformOrigin: element.transformOrigin || "center center"
-  };
-}
-
-function Layer({ element, width, height }) {
-  const style = layerStyle(element, width, height);
-
-  if (element.type === "image") {
-    if (!element.src) {
-      return (
-        <div
-          style={{
-            ...style,
-            border: "2px dashed rgba(255,255,255,.35)",
-            borderRadius: Number(element.borderRadius || 0),
-            background: "rgba(255,255,255,.08)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "rgba(255,255,255,.65)",
-            fontFamily: "Arial, sans-serif",
-            fontSize: 22
-          }}
-        >
-          {element.placeholder || "IMAGE"}
-        </div>
-      );
-    }
-
+function SlideArtwork({ slide, width, height }) {
+  if (slide.image) {
     return (
       <Img
-        src={element.src}
+        src={slide.image}
         style={{
-          ...style,
-          objectFit: element.objectFit || "cover",
-          borderRadius: Number(element.borderRadius || 0)
+          position: "absolute",
+          inset: 0,
+          width,
+          height,
+          objectFit: "cover"
         }}
       />
     );
   }
 
-  if (element.type === "text" || element.type === "button") {
-    return (
+  return (
+    <AbsoluteFill
+      style={{
+        background: slide.background || "#f5dfe2",
+        overflow: "hidden"
+      }}
+    >
       <div
         style={{
-          ...style,
-          background: element.background || "transparent",
-          color: element.color || "#fff",
-          borderRadius: Number(element.borderRadius || 0),
-          border: element.border || "none",
-          boxShadow: element.boxShadow || "none",
-          fontFamily: element.fontFamily || "Arial, Helvetica, sans-serif",
-          fontSize: Number(element.fontSize || 48),
-          fontWeight: Number(element.fontWeight || 400),
-          lineHeight: element.lineHeight || 1.1,
-          letterSpacing: Number(element.letterSpacing || 0),
-          textAlign: element.textAlign || "left",
-          whiteSpace: element.whiteSpace || "pre-wrap",
-          display: "flex",
-          alignItems: element.alignItems || "flex-start",
-          justifyContent: element.justifyContent || "flex-start",
-          padding: Number(element.padding || 0),
-          overflow: "hidden"
+          position: "absolute",
+          left: width * 0.075,
+          top: height * 0.27,
+          width: width * 0.85,
+          height: height * 0.50,
+          borderRadius: width * 0.035,
+          background: slide.cardColor || "#df2634"
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: width * 0.12,
+          top: height * 0.45,
+          width: width * 0.76,
+          textAlign: "center",
+          color: "#fff",
+          fontFamily: "Arial, Helvetica, sans-serif",
+          fontSize: width * 0.065,
+          fontWeight: 500
         }}
       >
-        {element.text || ""}
+        {slide.title || "Title"}
       </div>
-    );
-  }
-
-  if (element.type === "shape") {
-    return (
       <div
         style={{
-          ...style,
-          background: element.background || "#fff",
-          borderRadius:
-            element.shape === "circle"
-              ? "50%"
-              : Number(element.borderRadius || 0),
-          border: element.border || "none",
-          boxShadow: element.boxShadow || "none"
+          position: "absolute",
+          left: width * 0.12,
+          top: height * 0.62,
+          width: width * 0.76,
+          textAlign: "center",
+          color: "#fff",
+          fontFamily: "Arial, Helvetica, sans-serif",
+          fontSize: width * 0.06,
+          fontWeight: 500
         }}
-      />
-    );
-  }
-
-  return null;
+      >
+        {slide.subtitle || "Subtitle"}
+      </div>
+    </AbsoluteFill>
+  );
 }
 
-function Slide({ elements, progress, direction, width, height }) {
+function Slide({ slide, progress, direction, width, height }) {
   const entering = direction === "enter";
 
   const x = interpolate(
     progress,
     [0, 1],
-    entering ? [width * 1.02, 0] : [0, -width * 1.02],
-    { easing: ease, extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    entering ? [width, 0] : [0, -width],
+    {
+      easing: transitionEase,
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp"
+    }
   );
 
   const rotateY = interpolate(
     progress,
     [0, 1],
-    entering ? [68, 0] : [0, -68],
-    { easing: ease, extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    entering ? [72, 0] : [0, -72],
+    {
+      easing: transitionEase,
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp"
+    }
   );
 
   const scale = interpolate(
     progress,
-    [0, 1],
-    entering ? [0.96, 1] : [1, 0.96],
-    { easing: ease, extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
-
-  const opacity = interpolate(
-    Math.abs(rotateY),
-    [0, 45, 68],
-    [1, 1, 0.2],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    [0, 0.5, 1],
+    entering ? [0.98, 0.99, 1] : [1, 0.99, 0.98],
+    {
+      easing: transitionEase,
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp"
+    }
   );
 
   return (
-    <div
+    <AbsoluteFill
       style={{
-        position: "absolute",
-        inset: 0,
-        width,
-        height,
-        perspective: 1800,
-        transformStyle: "preserve-3d",
-        pointerEvents: "none"
+        perspective: 1500,
+        overflow: "hidden"
       }}
     >
       <div
         style={{
           position: "absolute",
           inset: 0,
-          width,
-          height,
-          transform: `translateX(${x}px) rotateY(${rotateY}deg) scale(${scale})`,
-          transformOrigin: "50% 50%",
           transformStyle: "preserve-3d",
-          backfaceVisibility: "hidden",
-          opacity
+          transformOrigin: "50% 50%",
+          transform: `translate3d(${x}px,0,0) rotateY(${rotateY}deg) scale(${scale})`,
+          backfaceVisibility: "hidden"
         }}
       >
-        {elements.map((element) => (
-          <Layer
-            key={element.id}
-            element={element}
-            width={width}
-            height={height}
-          />
-        ))}
+        <SlideArtwork slide={slide} width={width} height={height} />
       </div>
-    </div>
+    </AbsoluteFill>
   );
 }
 
@@ -198,9 +148,15 @@ export function ChromeCarousel({ template = {}, data = {} }) {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
 
+  const slides = data.slides?.length
+    ? data.slides
+    : template.sampleData?.slides?.length
+      ? template.sampleData.slides
+      : [];
+
   const slideCount = Math.max(
     1,
-    Number(template.chromeCarousel?.slideCount || data.slides?.length || 4)
+    Number(template.chromeCarousel?.slideCount || slides.length || 4)
   );
 
   const slideDuration = Number(
@@ -228,29 +184,22 @@ export function ChromeCarousel({ template = {}, data = {} }) {
     currentIndex < slideCount - 1 && elapsed >= transitionStart;
 
   const progress = transitioning
-    ? transitionProgress(frame, slideStart + transitionStart, transitionFrames)
+    ? progressFor(frame, slideStart + transitionStart, transitionFrames)
     : 1;
 
-  const currentElements = renderableElements(template, currentIndex);
-  const nextElements = transitioning
-    ? renderableElements(template, currentIndex + 1)
-    : [];
-
-  const currentBackground =
-    currentElements.find((element) => element.role === "background")?.background ||
-    template.background?.color ||
-    "#f5f5f5";
+  const currentSlide = slides[currentIndex] || {};
+  const nextSlide = slides[currentIndex + 1] || {};
 
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: currentBackground,
         overflow: "hidden",
-        perspective: 1800
+        backgroundColor: currentSlide.background || "#f5dfe2",
+        perspective: 1500
       }}
     >
       <Slide
-        elements={currentElements}
+        slide={currentSlide}
         progress={progress}
         direction="leave"
         width={width}
@@ -259,7 +208,7 @@ export function ChromeCarousel({ template = {}, data = {} }) {
 
       {transitioning && (
         <Slide
-          elements={nextElements}
+          slide={nextSlide}
           progress={progress}
           direction="enter"
           width={width}

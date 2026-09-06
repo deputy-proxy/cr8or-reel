@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch src/server.js",
+    "build:preview": "vite build --config preview/vite.config.js",
+    "preview": "vite --config preview/vite.config.js --host 0.0.0.0 --port 4173"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.520",
@@ -14,6 +16,11 @@
     "express": "5.1.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "remotion": "4.0.520"
+    "remotion": "4.0.520",
+    "ogl": "^1.0.11",
+    "@remotion/player": "4.0.520"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
   }
 }

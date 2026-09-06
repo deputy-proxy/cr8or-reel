@@ -18,6 +18,7 @@ const app = express();
 
 app.use(express.json({ limit: "10mb", strict: true }));
 app.use(express.static(path.join(process.cwd(), "public")));
+app.use("/preview", express.static(path.join(process.cwd(), "public", "renderer-preview")));
 
 const PORT = Number(process.env.PORT || 3000);
 const RENDER_SECRET = process.env.RENDER_SECRET || "";
@@ -141,6 +142,39 @@ app.get("/api/templates/:id", async (req, res) => {
   }
 
   res.json(template);
+});
+
+app.get("/api/templates/:id/code", async (req, res) => {
+  try {
+    // The editor already knows the renderer. Prefer it so the code viewer
+    // does not fail merely because the template JSON is not persisted in the
+    // same backend yet (for example, a GitHub-backed deployment).
+    const requestedRenderer = String(req.query.renderer || "").trim();
+    const template = requestedRenderer ? null : await getTemplate(req.params.id);
+    const renderer = requestedRenderer || String(template?.renderer || "Template");
+
+    if (!/^[A-Za-z0-9_-]+$/.test(renderer)) {
+      return res.status(400).json({ error: "Invalid renderer" });
+    }
+
+    const candidates = [
+      path.join(rootDir, "src", "templates", `${renderer}.jsx`),
+      path.join(rootDir, "src", `${renderer}.jsx`)
+    ];
+    let source = null;
+    let filename = `${renderer}.jsx`;
+    for (const candidate of candidates) {
+      try {
+        source = await fs.readFile(candidate, "utf8");
+        break;
+      } catch {}
+    }
+    if (source === null) return res.status(404).json({ error: `Renderer source not found: ${renderer}` });
+    res.json({ filename, renderer, code: source });
+  } catch (error) {
+    console.error("Template code lookup failed:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.put("/api/templates/:id", async (req, res) => {
@@ -398,6 +432,25 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Video renderer listening on port ${PORT}`);
-});
+async function startServer() {
+  if (process.env.NODE_ENV !== "production" && process.env.DISABLE_VITE_PREVIEW !== "1") {
+    try {
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        root: rootDir,
+        server: { middlewareMode: true },
+        appType: "spa"
+      });
+      app.use(vite.middlewares);
+      console.log("React renderer preview enabled via Vite");
+    } catch (error) {
+      console.warn("React renderer preview unavailable:", error.message);
+    }
+  }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Video renderer listening on port ${PORT}`);
+  });
+}
+
+startServer();
