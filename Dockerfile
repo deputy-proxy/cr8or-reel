@@ -3,9 +3,11 @@ FROM node:22-bookworm
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm install
 
 COPY . .
+
+RUN npm run build:preview && test -f public/renderer-preview/index.html
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -18,6 +20,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN npx remotion browser ensure
+
+RUN npm prune --omit=dev
 
 RUN mkdir -p /app/tmp && chown -R node:node /app
 
